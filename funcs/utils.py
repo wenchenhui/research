@@ -51,6 +51,9 @@ def update_progress(progress):
     sys.stdout.write(text)
     sys.stdout.flush()
         
+
+def concatenate_arrays(array_list):
+    return np.concatenate(array_list,axis=0)
         
 def acc_multiclass(preds,labels,weights):
     preds = np.argmax(preds,axis=1)
@@ -105,13 +108,13 @@ def loss(preds, labels):# NEED TO BALANCE THIS SHIT
     
 def ut_all(preds,labels):
     # from one hot encoding to label
-    #preds = preds[:,1]
+    preds = preds[:,1]
     
     l = loss(preds,labels)    
     acc = accuracy(preds,labels)
     auc = AUC(preds,labels)[0]
     
-    return l,acc,auc
+    return ("loss",l),("accuracy",acc),("auc",auc)
     
 def prauc(pos,negs):
     Npos = pos.shape[0]

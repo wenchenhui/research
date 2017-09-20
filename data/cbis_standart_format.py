@@ -5,26 +5,36 @@ Created on Fri Sep  8 16:09:06 2017
 @author: eduardo
 
 CBIS Standart data format
+
+References:
+    [1] -   Rebecca Sawyer Lee, Francisco Gimenez, Assaf Hoogi , Daniel Rubin
+            (2016). Curated Breast Imaging Subset of DDSM. The Cancer Imaging
+            Archive. http://dx.doi.org/10.7937/K9/TCIA.2016.7O02S9CY
+            
+    [2] -   Zuiderveld, K. (1994). Contrast Limited Adaptive Histogram Equalization.
+            Graphics Gems, 474-485. doi:10.1016/b978-0-12-336156-1.50061-6
 """
 
 import glob
 import os
-import utils as ut
+import funcs.utils as ut
 import dicom
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 import skimage.morphology as mo
 import skimage.measure as me
+from scipy.misc import imsave
 
 
-src_location = "/media/edu/TOSHIBA EXT/"
-folder_images = "raw CBIS mass/DOI/"
-folder_rois = "raw CBIS mass rois/DOI/"
-dst_location = "/media/edu/TOSHIBA EXT/dataset2/"
-
-def list_of_patients():
-    image_folders = glob.glob(os.path.join(src_location,folder_images,"*"))
+"""
+_______________________________________________________________________________
+___________________________________AZEALIA_____________________________________
+FUNCTIONS TO LIST DATA:
+    GET ALL PATIENTS, GET IMAGES OF EACH PATIENT, GET MASKS OF EACH IMAGE
+"""
+def _list_of_patients():
+    image_folders = glob.glob(os.path.join(_src_location,_folder_images,"*"))
     patients = set()
 
     for file in image_folders:
@@ -33,8 +43,8 @@ def list_of_patients():
     
     return list(patients)
 
-def images_of_pat(patient):
-    folders = glob.glob(os.path.join(src_location,folder_images,"*_"+patient+"_*"))
+def _images_of_pat(patient):
+    folders = glob.glob(os.path.join(_src_location,_folder_images,"*_"+patient+"_*"))
     images = []
     for folder in folders:
         first_folder = glob.glob(folder+"/*")[0]
@@ -44,9 +54,9 @@ def images_of_pat(patient):
         
     return images
     
-def masks_of_image(file):
+def _masks_of_image(file):
     folder = file.split("/")[-4]
-    folders = glob.glob(os.path.join(src_location,folder_rois,folder+"_*"))
+    folders = glob.glob(os.path.join(_src_location,_folder_masks,folder+"_*"))
 
     masks = [] 
     for folder in folders:
@@ -56,112 +66,13 @@ def masks_of_image(file):
             for name in files:
                 files_list.append(os.path.join(path, name))
                 
-        file = get_files_by_file_size(files_list)[-1]
+        file = _get_files_by_file_size(files_list)[-1]
         masks.append(file)
         
     return masks
-    
-scale = 1/24
-#clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))    
-def load_preprocess_save_image(file,patient,image_ids):
-    
-    #Load image
-    img = dicom.read_file(file).pixel_array
-    
-    #Stretch histogram
-    M = img.max()
-    m = img.min()
-    img = (img-m)/(M-m)
 
-    #Resize image
-    img = cv2.resize(img,(0,0),fx = scale,fy = scale)
-    
-    #Remove artifacts
-    roi,img = get_roi(img)
-    
-    #Save image
-    np.save(dst_location+patient+"_img_"+str(image_ids),img)
-    np.save(dst_location+patient+"_roi_"+str(image_ids),roi)
-    #print(img.max(),img.min())
-    plt.imshow(img)
-    plt.show()
-    plt.imshow(roi)
-    plt.show()
-    return roi
-
-
-def get_roi(img,disk_size = int(60*4/24)):
-    img = np.pad(img,disk_size+1,"constant")
-    hat = mo.white_tophat(img,selem = mo.disk(disk_size))
-    pre = img-hat
-    mask = pre>=0.01
-    labels = me.label(mask,connectivity=2)
-    if labels.max()>1:
-        #print("one escaped")
-        reg = me.regionprops(labels)
-        selected = 0
-        for i in range(len(reg)):
-            if reg[i].area > reg[selected].area:
-                selected=i
-        mask = (labels==reg[selected].label)
-    mask = mo.dilation(mask,selem=mo.disk(int(disk_size/2)))
-    final = img*mask
-    rm = disk_size+1
-    return mask[rm:-rm,rm:-rm],final[rm:-rm,rm:-rm]
-    
-def load_preprocess_save_mask(file,patient,image_ids,mask_ids,roi):
-    #mask = dicom.read_file(file).pixel_array
-    
-    try:
-        mask = dicom.read_file(file).pixel_array
-    except:
-        aux = dicom.read_file(file)
-        aux[65536*32736+16].value=aux[65536*32736+16].value[1::]
-        mask = aux.pixel_array
-        #print("first: ",aux[65536*32736+16].value[0],", second: ",aux[65536*32736+16].value[-1])
-            
-    mask = cv2.resize(mask,roi.shape[::-1])
-    plt.imshow(mask)
-    plt.show()
-    print(np.sum(mask*roi)/np.sum(mask))
-    assert np.sum(mask*roi) > np.sum(mask)*0.5
-    np.save(dst_location+patient+"_mask_"+str(image_ids)+"_"+str(mask_ids),mask)
-    
-    return
-    
-def make_CBIS_standart_format():
-    
-    print("SAVING CBIS IN THE STANDART FORMAT. THANK YOU FOR PROCESSING WITH US!")
-    os.makedirs(dst_location)
-    patients = list_of_patients()
-    #patient_dict = dict()
-    
-    image_ids = 0
-
-    bar = ut.progress_bar(len(patients))
-    for patient in patients:
-        
-        image_files = images_of_pat(patient)
-        #patient_dict[patient] = image_files
-
-        for file in image_files:
-            roi = load_preprocess_save_image(file,patient,image_ids)
-            masks_files = masks_of_image(file)
-
-            mask_ids = 0
-            for file2 in masks_files:
-                print(file2)
-                load_preprocess_save_mask(file2, patient,image_ids, mask_ids, roi)
-                mask_ids+=1
-
-            image_ids+=1
-        
-        bar.tick()
-        
-    print("WAIT IS OVER BOY! SEE YOU NEXT MONTH.")
-        
-        
-def get_files_by_file_size(files, reverse=False):
+# AUXILIARY    
+def _get_files_by_file_size(files, reverse=False):
     """ Return list of file paths in directory sorted by file size """
     # Re-populate list with filename, size tuples
     for i in range(len(files)):
@@ -179,17 +90,171 @@ def get_files_by_file_size(files, reverse=False):
     return files
 
 
+
+
 """
-TEST NUMBER OF PATIENTS AND IMAGES
+_______________________________________________________________________________
+____________________________________BANKS______________________________________
+FUNCTIONS TO PROCESS IMAGES:
+    LOAD/PREPROCESS/SAVE IMAGES/ROIS/MASKS
 """
 
-def print_number_of_patients():
-    pats = list_of_patients()
-    print(len(pats),"patients")
-    images = 0
+_clahe_op = cv2.createCLAHE(clipLimit=2, tileGridSize=(8,8))
+def _load_preprocess_save_image(file,patient,image_ids):
+    
+    #Load image
+    img = dicom.read_file(file).pixel_array
+    
+    #Stretch histogram and convert to uint8
+    M = img.max()
+    m = img.min()
+    img = ((img-m)/(M-m))*255
+    img = img.astype(np.uint8)
+    
+    # Apply CLAHE method [2]
+    img = _clahe_op.apply(img)
+    
+    # Resize image
+    img = cv2.resize(img,(0,0),fx = _scale,fy = _scale)
+    
+    # Remove artifacts
+    roi,img = _get_roi(img)
+    
+    # Save image
+    if _debug:
+        imsave(_dst_location+patient+"_img_"+str(image_ids)+".png",img)
+        imsave(_dst_location+patient+"_roi_"+str(image_ids)+".png",roi)
+    else:
+        np.save(_dst_location+patient+"_img_"+str(image_ids),img.astype(float)/255)
+        np.save(_dst_location+patient+"_roi_"+str(image_ids),roi)
+    
+    return roi
+
+def _get_roi(img,disk_size = int(60*4/24)):
+    img = np.pad(img,disk_size+1,"constant")
+    hat = mo.white_tophat(img,selem = mo.disk(disk_size))
+    pre = img-hat
+    mask = pre>=0.01
+    labels = me.label(mask,connectivity=2)
+    if labels.max()>1:
+        #print("one escaped")
+        reg = me.regionprops(labels)
+        selected = 0
+        for i in range(len(reg)):
+            if reg[i].area > reg[selected].area:
+                selected=i
+        mask = (labels==reg[selected].label)
+        
+    mask = mo.dilation(mask,selem=mo.disk(int(disk_size/2)))
+    final = img*mask
+    rm = disk_size+1
+    
+    return mask[rm:-rm,rm:-rm],final[rm:-rm,rm:-rm]
+    
+def _load_preprocess_save_mask(file,patient,image_ids,mask_ids,roi):
+    
+    try:
+        mask = dicom.read_file(file).pixel_array
+    except:
+        aux = dicom.read_file(file)
+        aux[65536*32736+16].value=aux[65536*32736+16].value[1::]
+        mask = aux.pixel_array
+        #print("first: ",aux[65536*32736+16].value[0],", second: ",aux[65536*32736+16].value[-1])
+            
+    mask = cv2.resize(mask,roi.shape[::-1])
+    #plt.imshow(mask)
+    #plt.show()
+    assert np.sum(mask*roi) > np.sum(mask)*0.5
+    np.save(_dst_location+patient+"_mask_"+str(image_ids)+"_"+str(mask_ids),mask)
+    
+    return
+    
+    
+"""
+_______________________________________________________________________________
+________________________________CLEMENTINE_____________________________________
+MAIN FUNCTION
+    CREATES THE STANDARD DATASET
+"""
+def make_CBIS_standart_format(scale, clahe, src_location, folder_images, folder_masks, dst_location, debug):
+    
+    # DEFINE SETTINGS AS GLOBAL VARIABLES
+    global _scale, _clahe, _src_location, _folder_images, _folder_masks, _dst_location, _debug
+    _scale = scale
+    _clahe = clahe
+    _src_location = src_location
+    _folder_images = folder_images
+    _folder_masks = folder_masks
+    _dst_location = dst_location
+    _debug = debug
+    
+    # PRINT INFORMATION ABOUT THE DATASET
+    print("TRANSFORMING CBIS TO STANDARD FORMAT")
+    os.makedirs(dst_location)
+    no_pats,no_imgs,no_masks = _number_of_patients_and_images()
+    print("\t Processing ",no_pats," patients")
+    print("\t Processing ",no_imgs," images")
+    print("\t Processing ",no_masks," masks")
+    
+    # PROGRESS BAR OBJECT
+    bar = ut.progress_bar(no_pats)
+    
+    # GET AVAILABLE PATIENTS
+    patients = _list_of_patients()
+    
+    # IMAGE ID TRACKER (MAKES SURE NO TWO IMAGES HAVE THE SAME NAME)
+    image_ids = 0
+
+    # WE PROCESS ONE PATIENT AT A TIME
+    for patient in patients:
+        image_files = _images_of_pat(patient)
+        
+        # WE PROCESS ONE IMAGE AT A TIME
+        for file in image_files:
+            
+            # SAVE THIS IMAGE AND ROI AS A NPY/PNG
+            # ROI IS RETURNED TO ASSERT EVERY MASK IS INSIDE THE REGION OF INTEREST
+            roi = _load_preprocess_save_image(file,patient,image_ids)
+            
+            #GET MASKS
+            masks_files = _masks_of_image(file)
+            
+            # MASK ID TRACKER (IT IDENTIFIES EACH MASK IN THE SAME IMAGE)
+            """ WARNING: IDS CAN BE DIFFERENT FROM THE ONES FOUND IN THE CBIS 
+            CSV FILES"""
+            mask_ids = 0
+            
+            # WE PROCESS EACH MASK INDIVIDUALLY
+            for file2 in masks_files:
+                
+                # SAVE THIS MASK AS A NPY/PNG
+                _load_preprocess_save_mask(file2, patient,image_ids, mask_ids, roi)
+                mask_ids+=1
+
+            image_ids+=1
+        
+        # PROGRESS BAR UPDATE
+        bar.tick()
+        
+    print("A NEW CBIS DATASET IN THE STANDART FORMAT WAS SAVED IN:",_dst_location)
+    print("Parameters:")
+    print("\t->scale",_scale)
+    print("\t->clahe",_clahe)
+
+
+# AUXILIARY    
+def _number_of_patients_and_images():
+    pats = _list_of_patients()
+    #print(len(pats),"patients")
+    
+    no_images = 0
+    no_masks = 0
     for i in range(len(pats)):
-        images+=len(images_of_pat(pats[i]))
-    print(images,"images")
-
-make_CBIS_standart_format()
+        images = _images_of_pat(pats[i])
+        no_images+=len(images)
+        
+        for j in range(len(images)):
+            masks = _masks_of_image(images[j])
+            no_masks+=len(masks)
+    return len(pats),no_images,no_masks
 

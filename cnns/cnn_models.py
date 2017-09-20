@@ -4,7 +4,7 @@ Created on Tue Aug  8 10:16:07 2017
 
 @author: eduardo
 """
-import cnn_lib
+import cnns.cnn_lib as cnn_lib
 import tensorflow as tf
 import numpy as np
 
@@ -59,6 +59,14 @@ def classifier156():
     model.add_easy_layer(ltype="dense", n_filters = 256)
     model.add_easy_layer(ltype="out", n_filters = 2)
     
+def test_model():
+    model = Model([36,36])
+    model.add_easy_layer(ltype="conv", filters_shape = [36,36], n_filters = 32)
+    model.add_easy_layer(ltype="flatten")
+    model.add_easy_layer(ltype="out",n_filters=2)
+    model._compile()
+    return model
+    
 def alexMet(n_classes):
     
     alex = Model([224,224])
@@ -110,7 +118,7 @@ def alexMet_rotat(n_classes):
     #alex.add_easy_layer(ltype = "batchnorm",n_filters = 256, moments=[0])
     alex.add_easy_layer(ltype="out", n_filters = n_classes)
     #alex.add_easy_layer(ltype = "conv_rotat",filters_shape = [14,14],n_filters = 256,padding="VALID",stride=1,activation="relu")
-   # alex.add_easy_layer(ltype = "batchnorm",n_filters = 256, moments=[0,1,2])    
+    #alex.add_easy_layer(ltype = "batchnorm",n_filters = 256, moments=[0,1,2])    
     #alex.add_easy_layer(ltype="flatten")
     #alex.add_easy_layer(ltype="dense", n_filters = 256)
     #alex.add_easy_layer(ltype = "batchnorm",n_filters = 256, moments=[0])
@@ -308,8 +316,8 @@ class Model():
                                            self.keep_prob:0.8, self.learning_rate:learning_rate})
         return outs[0],outs[2]
         
-    def test(self,sess,batchx):
-        return sess.run(self.pred,feed_dict={self.inp:batchx,self.phase_train:False,self.keep_prob:1})
+    def test(self,sess,batchx,batchy):
+        return sess.run([self.loss, self.pred],feed_dict={self.inp:batchx, self.y:batchy, self.phase_train:False, self.keep_prob:1})
     
     def test_loss_acc(self,sess,batchx,batchy):
         return 0

@@ -21,6 +21,7 @@ Created on Fri Sep  8 11:47:37 2017
 Basic imports
 """
 from matplotlib import pyplot as plt
+import funcs.configs as configs
 import numpy as np
 import glob
 import os
@@ -32,7 +33,7 @@ from scipy.ndimage.measurements import center_of_mass
 from scipy.misc import imsave
 import cv2
 import random
-import utils as ut
+import funcs.utils as ut
 
 sqrt2 = np.sqrt(2)
 trans_const = (sqrt2-1)/2
@@ -40,9 +41,10 @@ halfpatch = 18
 """
 Paths setup
 """
-split_save_path = "/home/eduardo/dataset_infos/"
-dataset_path = "/media/edu/TOSHIBA EXT/dataset2/"
-base_patches_path = "/home/edu/dataset_test"
+username = configs.username
+split_save_path = "/home/"+username+"/dataset_infos/"
+dataset_path = "/media/"+username+"/TOSHIBA EXT/dataset2/"
+base_patches_path = "/home/"+username+"/dataset_test"
 
 class dataset():
     def __init__(self,iD, name, dataset):
