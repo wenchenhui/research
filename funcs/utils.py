@@ -8,7 +8,14 @@ import numpy as np
 from matplotlib import pyplot as plt
 import time
 import sys
+import sklearn.metrics
 
+
+"""
+_______________________________________________________________________________
+___________________________________ZILEAN______________________________________
+SUPPORT METHODS FOR HELPING WITH SIMPLE GUIS
+"""
 class timer():
     def __init__(self):
         self.current = time.time()
@@ -27,12 +34,14 @@ class progress_bar():
         if progress==None:
             self.last_step = self.last_step+1
             progress = self.last_step
-        update_progress(float(progress)/self.steps)
+        _update_progress(float(progress)/self.steps)
+        
+
 # update_progress() : Displays or updates a console progress bar
 ## Accepts a float between 0 and 1. Any int will be converted to a float.
 ## A value under 0 represents a 'halt'.
 ## A value at 1 or bigger represents 100%
-def update_progress(progress):
+def _update_progress(progress):
     barLength = 10 # Modify this to change the length of the progress bar
     status = ""
     if isinstance(progress, int):
@@ -52,9 +61,43 @@ def update_progress(progress):
     sys.stdout.flush()
         
 
-def concatenate_arrays(array_list):
-    return np.concatenate(array_list,axis=0)
+
+
+
+
+
+"""
+_______________________________________________________________________________
+___________________________________TEST________________________________________
+PERFORMANCE METRICS V2
+"""
+def precision_recall_curve(single_preds,single_labels,show=True,ret=False):
+    precision, recall, _ = sklearn.metrics.precision_recall_curve(single_labels, single_preds)
+    if show:
+        plt.step(recall, precision, color='b', alpha=0.2,where='post')
+        plt.fill_between(recall, precision, step='post', alpha=0.2,color='b')
+    if ret:
+        return precision,recall
         
+def pr_auc(single_preds,single_labels):
+    prec,rec = sklearn.metrics.precision_recall_curve(single_preds,single_labels,False,True)
+    return sklearn.metrics.auc(rec,prec)
+    
+def roc_curve(single_preds,single_labels):
+    fpr, tpr, _ = sklearn.metrics.roc_curve(single_labels,single_preds)
+    plt.step(fpr, tpr, color='b', alpha=0.2,where='post')
+    plt.fill_between(fpr, tpr, step='post', alpha=0.2,color='b')
+    
+def roc_auc(single_preds,single_labels):
+    return sklearn.metrics.roc_auc_score(single_labels,single_preds)
+    
+"""
+_______________________________________________________________________________
+___________________________________TEST________________________________________
+OLD PERFORMANCE METRICS
+"""    
+    
+    
 def acc_multiclass(preds,labels,weights):
     preds = np.argmax(preds,axis=1)
     correct_ones = (preds==labels)
@@ -158,3 +201,12 @@ def positives_captured(pos,negs):
     
     return first_row,second_row
     
+        
+"""
+_______________________________________________________________________________
+___________________________________OTHER________________________________________
+RANDOM AUXILIARY METHODS
+"""
+
+def concatenate_arrays(array_list):
+    return np.concatenate(array_list,axis=0)

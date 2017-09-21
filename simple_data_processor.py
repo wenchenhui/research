@@ -246,7 +246,7 @@ def _save_patches(split,folder,list_of_patches,counter):
         else:
             np.save(directory+str(counter),p)
         counter+=1
-        
+
     return counter 
 
 
@@ -376,6 +376,8 @@ def _preprocess_mask(mask,trans):
     dx = trans.dx
     dy = trans.dy
 
+    mask = mask*255
+    
     if _use_elastic_deform:
         if shape!=None:
             x, y = np.meshgrid(np.arange(shape[1]), np.arange(shape[0]))
