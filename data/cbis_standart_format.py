@@ -131,10 +131,14 @@ def _load_preprocess_save_image(file,patient,image_ids):
     return roi
 
 def _get_roi(img,disk_size = int(60*4/24)):
-    img = np.pad(img,disk_size+1,"constant")
+    img = np.pad(img,disk_size+1,"reflect")
     hat = mo.white_tophat(img,selem = mo.disk(disk_size))
     pre = img-hat
-    mask = pre>=0.01
+    mask = pre>=10
+    #plt.imshow(mask)
+    #plt.show()
+    #plt.imshow(img)
+    #plt.show()
     labels = me.label(mask,connectivity=2)
     if labels.max()>1:
         #print("one escaped")
@@ -162,11 +166,16 @@ def _load_preprocess_save_mask(file,patient,image_ids,mask_ids,roi):
         #print("first: ",aux[65536*32736+16].value[0],", second: ",aux[65536*32736+16].value[-1])
             
     mask = cv2.resize(mask,roi.shape[::-1])
+    mask = mask>0
     #plt.imshow(mask)
     #plt.show()
     assert np.sum(mask*roi) > np.sum(mask)*0.5
-    np.save(_dst_location+patient+"_mask_"+str(image_ids)+"_"+str(mask_ids),mask)
     
+    if _debug:
+        imsave(_dst_location+patient+"_mask_"+str(image_ids)+"_"+str(mask_ids)+".png",mask)
+    else:
+        np.save(_dst_location+patient+"_mask_"+str(image_ids)+"_"+str(mask_ids),mask)
+    #print("mask", mask.max())
     return
     
     

@@ -20,7 +20,7 @@ dst_location = "/media/eduardo/TOSHIBA EXT/tmp_testdataset/"
 debug = False
 
 
-#cbis_standart_format.make_CBIS_standart_format(scale,clahe,src_location,folder_images,folder_masks,dst_location,debug)
+cbis_standart_format.make_CBIS_standart_format(scale,clahe,src_location,folder_images,folder_masks,dst_location,debug)
 
 """ Simple Data Processor """
 
@@ -32,15 +32,10 @@ set_masses_size = {"train":491,"validation":100,"test":100}
 set_neg_size = {"train":0,"validation":0,"test":0}
 
 dataset = simple_data_processor.make_dataset(set_masses_size, set_neg_size, src_location, dst_location)
+dataset.save(dst_location)
 
-"""
-OPOPOPOPOPOPOPOP
-_______________
+# PATCHES
 
-WARNING: YOU NEED TO SAVE THE DATASET. NOT DONE YET
-_________________
-OPOPOPOPOPOPOPOP
-"""
 halfpatch= 18
 
 no_transformations = 5

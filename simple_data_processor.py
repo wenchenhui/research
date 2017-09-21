@@ -112,17 +112,17 @@ class dataset():
                     full_mask = _preprocess_mask(full_mask,trans)
 
                     # CREATE AND SAVE NEGATIVE PATCHES
-                    patches = _take_negative_patches(full_mask,roi,full_mask)
+                    patches = _take_negative_patches(img,roi,full_mask)
                     counter = _save_patches(split,"negative",patches,counter)
                     
                     # CREATE AND SAVE POSITIVE PATCHES (ONE FOR EACH MASK)
                     for mask in masks:
                         mask = _preprocess_mask(mask,trans)
-                        patches = _take_positive_patches(full_mask,mask)
+                        patches = _take_positive_patches(img,mask)
                         counter = _save_patches(split,"positive",patches,counter)
                         
-    def save(self):
-        pkl.dump(self,open("split_"+self.name,"wb"))
+    def save(self,path):
+        pkl.dump(self,open(path+"/dataset_"+self.name,"wb"))
 
 
 def make_dataset(set_masses_size, set_neg_size, src_loc, dst_loc):
@@ -241,9 +241,12 @@ def _save_patches(split,folder,list_of_patches,counter):
         os.makedirs(directory)
         
     for p in list_of_patches:
-        #np.save(directory+str(counter),p)
-        imsave(directory+str(counter)+".png",p)
+        if _debug:
+            imsave(directory+str(counter)+".png",p)
+        else:
+            np.save(directory+str(counter),p)
         counter+=1
+        
     return counter 
 
 
