@@ -26,7 +26,7 @@ debug = False
 
 
 src_location = dst_location
-dst_location = "/home/username/tmp_testdataset2ndpart"
+dst_location = "/home/eduardo/tmp_testdataset2ndpart"
 
 set_masses_size = {"train":491,"validation":100,"test":100}
 set_neg_size = {"train":0,"validation":0,"test":0}

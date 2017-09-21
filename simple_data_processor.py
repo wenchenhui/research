@@ -95,10 +95,10 @@ class dataset():
             for img_iD in self.splits[split]:
                 
                 # LOAD IMAGE, MASKS AND ROI. CREATE FULL MASK (SUM OF MASKS)
-                img = np.load(self.files_names[img_iD])
-                masks = _load_file_array(self.masks[img_iD])
-                roi = np.load(self.rois[img_iD])
-                full_mask = _sum_masks(masks)
+                img_ori = np.load(self.files_names[img_iD])
+                masks_ori = _load_file_array(self.masks[img_iD])
+                roi_ori = np.load(self.rois[img_iD])
+                full_mask_ori = _sum_masks(masks)
                 
                 # FOR no_transformations TIMES
                 for i in range(no_transformations):
@@ -107,16 +107,16 @@ class dataset():
                     trans = _get_random_transformation_parameters()    
                     
                     #APPLY TO IMAGE, MASKS AND ROI
-                    img = _preprocess(img,trans)
-                    roi = _preprocess_mask(roi,trans)
-                    full_mask = _preprocess_mask(full_mask,trans)
+                    img = _preprocess(img_ori,trans)
+                    roi = _preprocess_mask(roi_ori,trans)
+                    full_mask = _preprocess_mask(full_mask_ori,trans)
 
                     # CREATE AND SAVE NEGATIVE PATCHES
                     patches = _take_negative_patches(img,roi,full_mask)
                     counter = _save_patches(split,"negative",patches,counter)
                     
                     # CREATE AND SAVE POSITIVE PATCHES (ONE FOR EACH MASK)
-                    for mask in masks:
+                    for mask in masks_ori:
                         mask = _preprocess_mask(mask,trans)
                         patches = _take_positive_patches(img,mask)
                         counter = _save_patches(split,"positive",patches,counter)
@@ -361,6 +361,10 @@ def _preprocess(image,trans):
         image = cv2.flip(image,0)
       
     if _use_rotations:
+        end_rows = 
+        end_cols = 
+        
+        image = np.pad(image,)
         M = np.float32([[1,0,trans_const*rows+_halfpatch],[0,1,trans_const*rows+_halfpatch]])
         image = cv2.warpAffine(image,M,(int(sqrt2*rows)+2*_halfpatch,int(sqrt2*rows)+2*_halfpatch))
         
@@ -376,7 +380,7 @@ def _preprocess_mask(mask,trans):
     dx = trans.dx
     dy = trans.dy
 
-    mask = mask*255
+    mask = mask.astype(float)
     
     if _use_elastic_deform:
         if shape!=None:
