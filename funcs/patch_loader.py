@@ -75,8 +75,8 @@ def _load_specific_batch(directory,batch_number):
         
 def load(file):
     #return np.ones((36,36,1))
-    return imread(file)[:,:,np.newaxis]
-    #return np.load(file)
+    #return imread(file)[:,:,np.newaxis]
+    return np.load(file)[:,:,np.newaxis]
     
 def number_of_batches(set_):
     return 2

@@ -32,6 +32,7 @@ from scipy.ndimage.measurements import center_of_mass
 from scipy.misc import imsave
 import cv2
 import random
+import funcs.utils as ut
 
 # CONTANTS
 sqrt2 = np.sqrt(2)
@@ -88,17 +89,19 @@ class dataset():
         #COUNTER USED TO NAME PATCHES UNIQUELY
         counter = 0
         
+        
         #FOR EACH SPLIT        
         for split in self.splits.keys():
-            
+            print("Doing:",split)
+            bar = ut.progress_bar(len(self.splits[split]))
             #FOR EACH IMAGE OF CURRENT SPLIT
             for img_iD in self.splits[split]:
-                
+                bar.tick()                
                 # LOAD IMAGE, MASKS AND ROI. CREATE FULL MASK (SUM OF MASKS)
                 img_ori = np.load(self.files_names[img_iD])
                 masks_ori = _load_file_array(self.masks[img_iD])
                 roi_ori = np.load(self.rois[img_iD])
-                full_mask_ori = _sum_masks(masks)
+                full_mask_ori = _sum_masks(masks_ori)
                 
                 # FOR no_transformations TIMES
                 for i in range(no_transformations):
@@ -202,15 +205,20 @@ def _take_negative_patches(img,roi,full_mask):
     x = np.arange(0,img.shape[0],_halfpatch*2) 
     y = np.arange(0,img.shape[1],_halfpatch*2)
     
+    #plt.imshow(img)
+    #plt.show()
     counter = 0
+    #print(x)
+    #print(y)
     for i in range(x.shape[0]):
         for j in range(y.shape[0]):
             if roi[x[i],y[j]] == 1:
+                #print(img.shape)                
+                #print(":::",x[i],y[j])
                 if full_mask[x[i]-_halfpatch:x[i]+_halfpatch,y[j]-_halfpatch:y[j]+_halfpatch].sum()==0:
                     patches[counter] = img[x[i]-_halfpatch:x[i]+_halfpatch,y[j]-_halfpatch:y[j]+_halfpatch]
                     counter+=1
-                    
-                    
+
     return patches[0:counter].copy()
 
 def _take_positive_patches(img,mask):
@@ -361,15 +369,12 @@ def _preprocess(image,trans):
         image = cv2.flip(image,0)
       
     if _use_rotations:
-        end_rows = 
-        end_cols = 
+        added = int(0.8*rows)+_halfpatch
         
-        image = np.pad(image,)
-        M = np.float32([[1,0,trans_const*rows+_halfpatch],[0,1,trans_const*rows+_halfpatch]])
-        image = cv2.warpAffine(image,M,(int(sqrt2*rows)+2*_halfpatch,int(sqrt2*rows)+2*_halfpatch))
+        image = cv2.copyMakeBorder(image,added,added,added,added,cv2.BORDER_REFLECT_101)
         
-        M = cv2.getRotationMatrix2D(((sqrt2*rows)/2+_halfpatch,(sqrt2*rows)/2+_halfpatch),angle,1)
-        image = cv2.warpAffine(image,M,(int(sqrt2*rows)+2*_halfpatch,int(sqrt2*rows)+2*_halfpatch))
+        M = cv2.getRotationMatrix2D((image.shape[0]/2,image.shape[1]/2),angle,1)
+        image = cv2.warpAffine(image,M,(image.shape[0],image.shape[1]))
     
     return image
 
@@ -394,12 +399,14 @@ def _preprocess_mask(mask,trans):
     if mirroring and _use_mirroring:
         mask = cv2.flip(mask,0)
      
+     
     if _use_rotations:
-        M = np.float32([[1,0,trans_const*rows+_halfpatch],[0,1,trans_const*rows+_halfpatch]])
-        mask = cv2.warpAffine(mask,M,(int(sqrt2*rows)+2*_halfpatch,int(sqrt2*rows)+2*_halfpatch))
+        added = int(0.8*rows)+_halfpatch
         
-        M = cv2.getRotationMatrix2D(((sqrt2*rows)/2+_halfpatch,(sqrt2*rows)/2+_halfpatch),angle,1)
-        mask = cv2.warpAffine(mask,M,(int(sqrt2*rows)+2*_halfpatch,int(sqrt2*rows)+2*_halfpatch))
+        mask = cv2.copyMakeBorder(mask,added,added,added,added,cv2.BORDER_CONSTANT,value=0)
+        
+        M = cv2.getRotationMatrix2D((mask.shape[0]/2,mask.shape[1]/2),angle,1)
+        mask = cv2.warpAffine(mask,M,(mask.shape[0],mask.shape[1]))
     
     return mask
     

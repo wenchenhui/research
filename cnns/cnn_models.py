@@ -29,13 +29,15 @@ def detector36():
     model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 32)
     model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 32)
     model.add_easy_layer(ltype="max_pool",k=2, stride=2)
-    model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 128)
-    model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 128)
+    model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 64)
+    model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 64)
     model.add_easy_layer(ltype="max_pool",k=2, stride=2)
     model.add_easy_layer(ltype="flatten")
     model.add_easy_layer(ltype="dense", n_filters = 256)
     model.add_easy_layer(ltype="dense", n_filters = 256)
     model.add_easy_layer(ltype="out", n_filters = 2)
+    
+    model._compile()
     
     return model
     

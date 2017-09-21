@@ -80,7 +80,7 @@ def precision_recall_curve(single_preds,single_labels,show=True,ret=False):
         return precision,recall
         
 def pr_auc(single_preds,single_labels):
-    prec,rec = sklearn.metrics.precision_recall_curve(single_preds,single_labels,False,True)
+    prec,rec = precision_recall_curve(single_preds,single_labels,False,True)
     return sklearn.metrics.auc(rec,prec)
     
 def roc_curve(single_preds,single_labels):
@@ -91,6 +91,14 @@ def roc_curve(single_preds,single_labels):
 def roc_auc(single_preds,single_labels):
     return sklearn.metrics.roc_auc_score(single_labels,single_preds)
     
+def binary_accuracy(single_preds,single_labels):
+    return sklearn.metrics.accuracy_score(single_labels,np.round(single_preds))
+    
+def ut_metrics(singled_preds, single_labels):
+    pr = pr_auc(singled_preds,single_labels)
+    roc = roc_auc(singled_preds,single_labels)
+    acc = binary_accuracy(singled_preds,single_labels)
+    return ("PR AUC",pr),("ROC AUC",roc),("ACCURACY",acc)
 """
 _______________________________________________________________________________
 ___________________________________TEST________________________________________

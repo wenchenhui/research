@@ -42,6 +42,6 @@ use_rotations = True
 use_mirroring = True
 use_elastic_deform = True
 
-debug = True
+debug = False
 dataset.make_patches_dataset(no_transformations,use_rotations,use_mirroring,use_elastic_deform,debug)
 dataset.save(dst_location)
