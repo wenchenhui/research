@@ -30,7 +30,7 @@ def train_loop(experiment_name, model_number, dataset_path):
     # LEARNING PARAMETERS
     learning_rate = 0.0001
     
-    training_iterations = int(1e4)  # TRAINING ITERATIONS
+    training_iterations = int(2e3)  # TRAINING ITERATIONS
     one_epoch_every = 1e2           # ITERATIONS PER EPOCH 
     number_of_epochs = int(training_iterations/one_epoch_every)+1
     
