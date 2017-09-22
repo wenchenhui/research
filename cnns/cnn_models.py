@@ -329,10 +329,10 @@ class Model():
             print(l)
             
     def save(self,sess,path):
-        self.saver.save(sess,path)
+        self.saver.save(sess,path+"/model")
         
     def load(self,sess, path):
-        self.saver.restore(sess,path)
+        self.saver.restore(sess,path+"/model")
         
 
 def easy_layer(model, **args):

@@ -72,10 +72,11 @@ ___________________________________TEST________________________________________
 PERFORMANCE METRICS V2
 """
 def precision_recall_curve(single_preds,single_labels,show=True,ret=False):
-    precision, recall, _ = sklearn.metrics.precision_recall_curve(single_labels, single_preds)
+    precision, recall, _ = sklearn.metrics.precision_recall_curve(single_labels, single_preds,pos_label=1)
     if show:
         plt.step(recall, precision, color='b', alpha=0.2,where='post')
         plt.fill_between(recall, precision, step='post', alpha=0.2,color='b')
+        plt.show()
     if ret:
         return precision,recall
         

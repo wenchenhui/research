@@ -1,7 +1,7 @@
 
 import data.cbis_standart_format as cbis_standart_format
 import simple_data_processor
-
+import train_loop
 """
     WHOLE PROCESS OF LEARNING A PATCH MODEL FROM FULL IMAGES
 """
@@ -31,7 +31,7 @@ dst_location = "/home/eduardo/tmp_testdataset2ndpart"
 set_masses_size = {"train":491,"validation":100,"test":100}
 set_neg_size = {"train":0,"validation":0,"test":0}
 
-dataset = simple_data_processor.make_dataset(set_masses_size, set_neg_size, src_location, dst_location)
+#dataset = simple_data_processor.make_dataset(set_masses_size, set_neg_size, src_location, dst_location)
 
 # PATCHES
 
@@ -43,5 +43,7 @@ use_mirroring = True
 use_elastic_deform = True
 
 debug = False
-dataset.make_patches_dataset(no_transformations,use_rotations,use_mirroring,use_elastic_deform,debug)
-dataset.save(dst_location)
+#dataset.make_patches_dataset(no_transformations,use_rotations,use_mirroring,use_elastic_deform,debug)
+#dataset.save(dst_location)
+
+train_loop.train_loop("name",1,dst_location)

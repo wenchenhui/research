@@ -39,7 +39,7 @@ def train_loop(experiment_name, model_number, dataset_path):
         RESULTS
     """
     if model_number == 1:
-        results_path = "~/Results/"+experiment_name
+        results_path = "/home/eduardo/Results/"+experiment_name
         os.mkdir(results_path)
     
     
@@ -70,7 +70,7 @@ def train_loop(experiment_name, model_number, dataset_path):
     """
     CONFIGURE PATCH LOADER
     """
-    pl.define(dataset_path, ["positive","negative"], 128, (36,36,1))
+    pl.define(dataset_path, ["negative","positive"], 128, (36,36,1))
     pl.load_random_batch("train")
     
     sess = tf.Session()
@@ -98,20 +98,33 @@ def train_loop(experiment_name, model_number, dataset_path):
         loss_list.append(loss)
         y_list.append(batchy)
         
-        if (iteration+1)%one_epoch_every == 0:
+        if (iteration)%one_epoch_every == 0:
     
-            pl.load_specific_batch("validation",0)
+            split_counter = pl.iterative_load_full_split("validation",0)
             val_acts_list, val_loss_list, val_y_list = [],[],[]
             
-            for val_iter in range(pl.number_of_batches("validation")):
-    
+            while True:
                 val_batchx,val_batchy = pl.get_prepared_batch()
-                pl.load_specific_batch("validation",val_iter+1)
+
+                split_counter = pl.iterative_load_full_split("validation",split_counter)
+                    
                 val_loss,val_acts = model.test(sess,val_batchx,val_batchy)
                 
-                val_acts_list.append(acts)
-                val_loss_list.append(loss)
+                val_acts_list.append(val_acts)
+                val_loss_list.append(val_loss)
                 val_y_list.append(val_batchy)
+                
+                if split_counter == 0:
+                    
+                    val_batchx,val_batchy = pl.get_prepared_batch()
+                    
+                    val_loss,val_acts = model.test(sess,val_batchx,val_batchy)
+                
+                    val_acts_list.append(val_acts)
+                    val_loss_list.append(val_loss)
+                    val_y_list.append(val_batchy)
+                    
+                    break
         
             pl.load_random_batch("train")
               
