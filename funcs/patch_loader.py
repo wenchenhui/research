@@ -23,7 +23,12 @@ size = -1
 batch_objx = None
 batch_objy = None
 
-def define_size_shape(batch_size,shape):
+def define(initial_path,classes,batch_size,shape):
+    _define_initial_path(initial_path)
+    _define_classes(classes)
+    _define_size_shape(batch_size,shape)    
+    
+def _define_size_shape(batch_size,shape):
     global batch_objx, batch_objy, per_class_size, size
     size = batch_size
     assert size%len(classes)==0
@@ -36,11 +41,11 @@ def define_size_shape(batch_size,shape):
             list_of_files[directory,cl] = glob.glob(os.path.join(initial_path,directory,cl,"*"))
             indexes[directory,cl] = 0  
             
-def define_classes(inp):
+def _define_classes(inp):
     global classes
     classes = inp
 
-def define_initial_path(inp):
+def _define_initial_path(inp):
     global initial_path
     initial_path = inp
 

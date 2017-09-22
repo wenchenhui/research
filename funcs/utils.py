@@ -94,11 +94,13 @@ def roc_auc(single_preds,single_labels):
 def binary_accuracy(single_preds,single_labels):
     return sklearn.metrics.accuracy_score(single_labels,np.round(single_preds))
     
-def ut_metrics(singled_preds, single_labels):
+def ut_metrics(singled_preds, single_labels, loss):
     pr = pr_auc(singled_preds,single_labels)
     roc = roc_auc(singled_preds,single_labels)
     acc = binary_accuracy(singled_preds,single_labels)
-    return ("PR AUC",pr),("ROC AUC",roc),("ACCURACY",acc)
+    loss = np.mean(loss)
+    return ("Loss", loss),("PR AUC",pr),("ROC AUC",roc),("ACCURACY",acc)
+    
 """
 _______________________________________________________________________________
 ___________________________________TEST________________________________________
