@@ -9,7 +9,7 @@ import tensorflow as tf
 import numpy as np
 
 
-def detector36():
+def detector36(full_img = False):
     """    
     conv1   3x3     32 filters    
     conv2   3x3     32 filters
@@ -24,8 +24,11 @@ def detector36():
     output          2 filters
     """    
     
+    if full_img:
+        model = Test_model()
+    else:
+        model = Model([36,36])
     
-    model = Model([36,36])
     model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 32)
     model.add_easy_layer(ltype = "batchnorm",n_filters = 32, moments=[0,1,2])   
     model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 32)
@@ -46,8 +49,379 @@ def detector36():
     model._compile()
     
     return model
+
+
+class Test_model():
+    def __init__(self,in_channels):
+        self.inp= tf.placeholder(tf.float32,[None,None,None,in_channels])
+        self.phase_train = False
+        self.keep_prob = 1.0
+        self.out = self.inp
+        self.out_shape = [inp_shape[0],inp_shape[1],self.in_channels]
+        self.layers = []
+        
+    def add_easy_layer(self,**params):
+        layer = easy_test_layer(self,**params)
+        self.layers.append(layer)
+        self.out = layer.out
+        
+    def test(self,img):
     
     
+class Model():
+    def __init__(self, inp_shape, in_channels=1):
+        self.inp_shape = inp_shape
+        self.in_channels = in_channels
+        self.inp = tf.placeholder(tf.float32,[None,*inp_shape,in_channels])
+        self.phase_train = tf.placeholder(tf.bool,[])
+        self.keep_prob = tf.placeholder(tf.float32,[])
+        self.y = tf.placeholder(tf.int32,[None])
+        self.out = self.inp
+        self.out_shape = [inp_shape[0],inp_shape[1],self.in_channels]
+        self.layers = []
+        
+    def add_easy_layer(self,**params):
+        layer = easy_layer(self,**params)
+        self.layers.append(layer)
+        self.out = layer.out
+        return
+        
+    def _compile(self,add_loss = None):
+        self.pred = tf.nn.softmax(self.out)
+        
+        self.loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.y,logits=self.out))
+        
+        if add_loss != None:
+            self.loss = self.loss+add_loss
+        #self.acc = tf.metrics.accuracy(labels=self.y,logits=self.out)
+        self.learning_rate = tf.placeholder(tf.float32,[])
+        #update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+        #with tf.control_dependencies(update_ops):
+        # Ensures that we execute the update_ops before performing the train_step
+        self.train_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.loss)
+        self.saver = tf.train.Saver()
+        return
+    
+    def add_additional_loss(self,loss):
+        self.loss = self.loss+loss
+        
+    def train(self,sess,batchx,batchy,learning_rate):
+        outs = sess.run([self.loss,self.train_op,self.pred], feed_dict={self.inp:batchx, self.y:batchy, self.phase_train:True, 
+                                           self.keep_prob:0.8, self.learning_rate:learning_rate})
+        return outs[0],outs[2]
+        
+    def test(self,sess,batchx,batchy):
+        return sess.run([self.loss, self.pred],feed_dict={self.inp:batchx, self.y:batchy, self.phase_train:False, self.keep_prob:1})
+    
+    def test_loss_acc(self,sess,batchx,batchy):
+        return 0
+        
+    def print_layers(self):
+        for l in self.layers:
+            print(l)
+            
+    def save(self,sess,path):
+        self.saver.save(sess,path+"/model")
+        
+    def load(self,sess, path):
+        self.saver.restore(sess,path+"/model")
+        
+
+def easy_layer(model, **args):
+    
+    ltype = args.get("ltype")
+    
+    if ltype == "conv":
+        n_filters =         args.get("n_filters")
+        filters_shape =     args.get("filters_shape")
+        padding =           args.get("padding")
+        stride =            args.get("stride")
+        activation =        args.get("activation")
+        shape =             [filters_shape[0],filters_shape[1],model.out_shape[2],n_filters]
+        name =              "conv"+str(len(model.layers))
+        
+        layer = Convolutional_Layer(shape, name , model.out, padding=padding, stride=stride, activation=activation)
+        
+        #model.out_shape[0] = model.out_shape[0]-int((filters_shape[0]-1))
+        #model.out_shape[1] = model.out_shape[1]-int((filters_shape[1]-1))
+        #model.out_shape[2] = n_filters
+        model.out_shape = layer.out.shape.as_list()[1:4]
+        
+        return layer
+        
+    if ltype == "conv_rotat":
+        n_filters =         args.get("n_filters")
+        filters_shape =     args.get("filters_shape")
+        padding =           args.get("padding")
+        stride =            args.get("stride")
+        activation =        args.get("activation")
+        shape = [filters_shape[0],filters_shape[1],model.out_shape[2],n_filters]
+        name = "conv_rotat"+str(len(model.layers))
+        
+        layer = Convolutional_Layer_Rotat(shape, name , model.out, padding=padding, stride=stride, activation=activation)
+        
+        model.out_shape = layer.out.shape.as_list()[1:4]
+        
+        return layer
+        
+    if ltype == "conv_rotatV2":
+        n_filters =         args.get("n_filters")
+        filters_shape =     args.get("filters_shape")
+        padding =           args.get("padding")
+        stride =            args.get("stride")
+        activation =        args.get("activation")
+        shape = [filters_shape[0],filters_shape[1],model.out_shape[2],n_filters]
+        name = "conv_rotat"+str(len(model.layers))
+        
+        layer = Convolutional_Layer_RotatV2(shape, name , model.out, padding=padding, stride=stride, activation=activation)
+        
+        model.out_shape = layer.out.shape.as_list()[1:4]
+        
+        return layer
+        
+    if ltype == "max_pool":#make a class_wrapper
+        k = args.get("k")
+        stride = args.get("stride")
+        layer = cnn_lib.maxpool2d(model.out, k, stride)
+        model.out_shape[0] = int(model.out_shape[0]/2)
+        model.out_shape[1] = int(model.out_shape[1]/2)
+        
+        return Generic_Layer(layer)
+        
+    if ltype == "flatten":#make a class_wrapper
+        layer = cnn_lib.flatten(model.out)
+        model.out_shape = [model.out_shape[0]*model.out_shape[1]*model.out_shape[2]]        
+        return Generic_Layer(layer)
+    
+    if ltype == "dropout":#make a class_wrapper
+        layer = cnn_lib.dropout(model.out,model.keep_prob)
+        return Generic_Layer(layer)
+                
+    if ltype == "dense":
+        n_filters =         args.get("n_filters")
+        activation =        args.get("activation")
+        
+        layer = Dense_Layer([model.out_shape[0],n_filters], "dense"+str(len(model.layers)), model.out,activation=activation)
+        model.out_shape[0] = n_filters
+        return layer
+        
+    if ltype == "denseV2":
+        n_filters =         args.get("n_filters")
+        activation =        args.get("activation")
+        
+        layer = Dense_LayerV2([model.out_shape[0],n_filters], "dense"+str(len(model.layers)), model.out,activation=activation)
+        model.out_shape[0] = n_filters//4
+        
+        return layer
+        
+    if ltype == "out":
+        n_filters = args.get("n_filters")
+        layer = Dense_Layer([model.out_shape[0],n_filters], "out"+str(len(model.layers)), model.out, activation="linear")
+        model.out_shape[0] = n_filters
+        return layer
+        
+    if ltype == "batchnorm":
+        n_filters = args.get("n_filters")
+        name = "bn"+str(len(model.layers))
+        phase_train = model.phase_train
+        moments = args.get("moments")
+        layer = Batchnorm_Layer(n_filters,name,model.out,phase_train,moments)
+        return layer
+    
+def test_easy_layer(model, **args):
+    
+    ltype = args.get("ltype")
+    
+    if ltype == "conv":
+        n_filters =         args.get("n_filters")
+        filters_shape =     args.get("filters_shape")
+        padding =           args.get("padding")
+        stride =            args.get("stride")
+        activation =        args.get("activation")
+        shape =             [filters_shape[0],filters_shape[1],model.out_shape[2],n_filters]
+        name =              "conv"+str(len(model.layers))
+        
+        layer = Convolutional_Layer(shape, name , model.out, padding=padding, stride=stride, activation=activation)
+        model.out_shape = layer.out.shape.as_list()[1:4]
+        
+        return layer
+        
+    if ltype == "max_pool":#make a class_wrapper
+        k = args.get("k")
+        stride = args.get("stride")
+        layer = cnn_lib.full_image_max_pool(model.out)
+        layer = cnn_lib.strided(layer)        
+        model.out_shape[0] = int(model.out_shape[0]/2)
+        model.out_shape[1] = int(model.out_shape[1]/2)
+        
+        return Generic_Layer(layer)
+        
+    if ltype == "flatten":#make a class_wrapper
+        model.out_shape = [model.out_shape[0]*model.out_shape[1]*model.out_shape[2]]        
+        return Generic_Layer(model.out)
+    
+    if ltype == "dropout":#make a class_wrapper
+        layer = cnn_lib.dropout(model.out,model.keep_prob)
+        return Generic_Layer(layer)
+                
+    if ltype == "dense":
+        n_filters =         args.get("n_filters")
+        activation =        args.get("activation")
+        
+        layer = Dense_Layer([model.out_shape[0],n_filters], "dense"+str(len(model.layers)), model.out,activation=activation)
+        model.out_shape[0] = n_filters
+        return layer
+        
+    if ltype == "out":
+        n_filters = args.get("n_filters")
+        layer = Dense_Layer([model.out_shape[0],n_filters], "out"+str(len(model.layers)), model.out, activation="linear")
+        model.out_shape[0] = n_filters
+        return layer
+        
+"""
+    BETTER LIB FOR CONVNETS (MORE GENERAL)
+    TODO EXP_MOVING_WEIGHTS
+"""
+
+class Generic_Layer():# MAX_POOL, FLATTEN, ...
+    def __init__(self,layer):
+        self.out = layer
+        
+class Convolutional_Layer():
+    def __init__(self, shape, name, inp, padding = None , stride = None, activation = None):
+
+        padding = "VALID" if padding == None else padding
+        stride = 1 if stride == None else stride    
+        activation = "relu" if activation == None else activation 
+            
+        self.name = name
+        self.shape = shape
+        
+        with tf.variable_scope(name) as scope:       
+            self.W = Param(shape,"W",initializer("normal",np.sqrt(2/(shape[0]*shape[1]*shape[3]))))
+            self.b = Param(shape[3],"b",initializer("constant",0.0))
+            self.out = cnn_lib.conv2d(inp,self.W.value,self.b.value,stride=stride,padding=padding)            
+            self.out = cnn_lib.activation(self.out,activation)
+            
+        
+class Convolutional_Layer_Rotat():
+    def __init__(self, shape, name, inp, padding = None , stride = None, activation = None):
+        
+        padding = "VALID" if padding == None else padding
+        stride = 1 if stride == None else stride    
+        activation = "relu" if activation == None else activation 
+        
+        self.name = name
+        self.shape = shape
+        W_shape = shape.copy()
+        W_shape[3]=int(W_shape[3]/4)
+        with tf.variable_scope(name) as scope:       
+            self.W = Param(W_shape,"W",initializer("normal",np.sqrt(2/(shape[0]*shape[1]*shape[3]))))
+            self.b = Param(W_shape[3],"b",initializer("constant",0.0))
+            
+            layers = []
+            W = self.W.value
+            for i in range(4):
+                layers.append(cnn_lib.conv2d(inp,W,self.b.value,stride=stride,padding=padding))
+                W = cnn_lib.rotate(W)
+                #self.out = cnn_lib.conv2d(inp,self.W.value,self.b.value,stride=stride,padding=padding) 
+            layer = tf.concat(layers,axis = 3)
+            self.out = cnn_lib.activation(layer,activation)
+            
+class Convolutional_Layer_RotatV2():
+    def __init__(self, shape, name, inp, padding = None , stride = None, activation = None):
+        
+        padding = "VALID" if padding == None else padding
+        stride = 1 if stride == None else stride    
+        activation = "relu" if activation == None else activation 
+        
+        self.name = name
+        self.shape = shape
+        W_shape = shape.copy()
+        W_shape[3]=int(W_shape[3]/4)
+        with tf.variable_scope(name) as scope:       
+            self.W = Param(W_shape,"W",initializer("normal",np.sqrt(2/(shape[0]*shape[1]*shape[3]))))
+            self.b = Param(W_shape[3],"b",initializer("constant",0.0))
+            
+            layers = []
+            W = self.W.value
+            for i in range(4):
+                layers.append(cnn_lib.conv2d(inp,W,self.b.value,stride=stride,padding=padding))
+                W = cnn_lib.rotate(W)
+                #self.out = cnn_lib.conv2d(inp,self.W.value,self.b.value,stride=stride,padding=padding) 
+            layer = tf.stack(layers,axis = 4)
+            layer = tf.reduce_max(layer,axis=4)            
+            self.out = cnn_lib.activation(layer,activation)
+        
+        
+class Dense_Layer():
+    def __init__(self, shape, name, inp, activation = None):
+        
+        activation = "relu" if activation == None else activation 
+        
+        self.name = name
+        self.shape = shape
+        
+        with tf.variable_scope(name) as scope:       
+            self.W = Param(shape,"W",initializer("normal",np.sqrt(2/shape[0])))
+            self.b = Param(shape[1],"b",initializer("constant",0.0))
+            self.out = cnn_lib.dense(inp,self.W.value,self.b.value)
+            self.out = cnn_lib.activation(self.out,activation)
+
+
+class Dense_LayerV2():
+    def __init__(self, shape, name, inp, activation = None):
+        
+        activation = "relu" if activation == None else activation 
+        
+        self.name = name
+        self.shape = shape
+        
+        with tf.variable_scope(name) as scope:       
+            self.W = Param(shape,"W",initializer("normal",np.sqrt(2/shape[0])))
+            self.b = Param(shape[1],"b",initializer("constant",0.0))
+            layer = cnn_lib.dense(inp,self.W.value,self.b.value)
+            
+            self.out = tf.reduce_max(tf.reshape(layer,[-1,shape[1]//4,4]),axis=2)
+            self.out = cnn_lib.activation(self.out,activation)
+
+
+class Batchnorm_Layer():
+     def __init__(self, channels, name, inp, phase_train ,moments=[0,1,2]):  
+         
+         with tf.variable_scope(name) as scope:
+             self.gamma = Param([channels],"gamma",initializer("constant",1.0)) 
+             self.beta = Param([channels],"beta",initializer("constant",0.0))
+             
+             self.ema = tf.train.ExponentialMovingAverage(decay=0.8)
+             self.batch_mean, self.batch_var = tf.nn.moments(inp,moments)
+             
+             def mean_var_with_update():
+                ema_apply_op = self.ema.apply([self.batch_mean, self.batch_var])
+                with tf.control_dependencies([ema_apply_op]):
+                    return tf.identity(self.batch_mean), tf.identity(self.batch_var)
+            
+             mean,var = tf.cond(phase_train,mean_var_with_update,lambda: (self.ema.average(self.batch_mean),
+                                                                         self.ema.average(self.batch_var)))
+            
+         self.out = tf.nn.batch_normalization(inp,mean,var,self.beta.value,self.gamma.value,1e-3)
+             
+    
+class Param():
+    def __init__(self, shape, name, initializer):
+        self.value = tf.get_variable(name,shape,initializer=initializer)
+        self.shape = shape
+        self.name = name
+        
+        
+def initializer(i_type,param):
+    if i_type == "normal":
+        return tf.random_normal_initializer(stddev=param)
+    elif i_type == "constant":
+        return tf.constant_initializer(param)
+ 
+
+
 def classifier156():
     model = Model([156,156])
     model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 32)
@@ -279,308 +653,6 @@ def mnist_arch(rotat=False,v1=False):
     model._compile()
     
     return model
-    
-    
-    
-class Model():
-    def __init__(self, inp_shape, in_channels=1):
-        self.inp_shape = inp_shape
-        self.in_channels = in_channels
-        self.inp = tf.placeholder(tf.float32,[None,*inp_shape,in_channels])
-        self.phase_train = tf.placeholder(tf.bool,[])
-        self.keep_prob = tf.placeholder(tf.float32,[])
-        self.y = tf.placeholder(tf.int32,[None])
-        self.out = self.inp
-        self.out_shape = [inp_shape[0],inp_shape[1],self.in_channels]
-        self.layers = []
-        
-    def add_easy_layer(self,**params):
-        layer = easy_layer(self,**params)
-        self.layers.append(layer)
-        self.out = layer.out
-        return
-        
-    def _compile(self,add_loss = None):
-        self.pred = tf.nn.softmax(self.out)
-        
-        self.loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.y,logits=self.out))
-        
-        if add_loss != None:
-            self.loss = self.loss+add_loss
-        #self.acc = tf.metrics.accuracy(labels=self.y,logits=self.out)
-        self.learning_rate = tf.placeholder(tf.float32,[])
-        #update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-        #with tf.control_dependencies(update_ops):
-        # Ensures that we execute the update_ops before performing the train_step
-        self.train_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.loss)
-        self.saver = tf.train.Saver()
-        return
-    
-    def add_additional_loss(self,loss):
-        self.loss = self.loss+loss
-        
-    def train(self,sess,batchx,batchy,learning_rate):
-        outs = sess.run([self.loss,self.train_op,self.pred], feed_dict={self.inp:batchx, self.y:batchy, self.phase_train:True, 
-                                           self.keep_prob:0.8, self.learning_rate:learning_rate})
-        return outs[0],outs[2]
-        
-    def test(self,sess,batchx,batchy):
-        return sess.run([self.loss, self.pred],feed_dict={self.inp:batchx, self.y:batchy, self.phase_train:False, self.keep_prob:1})
-    
-    def test_loss_acc(self,sess,batchx,batchy):
-        return 0
-        
-    def print_layers(self):
-        for l in self.layers:
-            print(l)
-            
-    def save(self,sess,path):
-        self.saver.save(sess,path+"/model")
-        
-    def load(self,sess, path):
-        self.saver.restore(sess,path+"/model")
-        
-
-def easy_layer(model, **args):
-    
-    ltype = args.get("ltype")
-    
-    if ltype == "conv":
-        n_filters =         args.get("n_filters")
-        filters_shape =     args.get("filters_shape")
-        padding =           args.get("padding")
-        stride =            args.get("stride")
-        activation =        args.get("activation")
-        shape =             [filters_shape[0],filters_shape[1],model.out_shape[2],n_filters]
-        name =              "conv"+str(len(model.layers))
-        
-        layer = Convolutional_Layer(shape, name , model.out, padding=padding, stride=stride, activation=activation)
-        
-        #model.out_shape[0] = model.out_shape[0]-int((filters_shape[0]-1))
-        #model.out_shape[1] = model.out_shape[1]-int((filters_shape[1]-1))
-        #model.out_shape[2] = n_filters
-        model.out_shape = layer.out.shape.as_list()[1:4]
-        
-        return layer
-        
-    if ltype == "conv_rotat":
-        n_filters =         args.get("n_filters")
-        filters_shape =     args.get("filters_shape")
-        padding =           args.get("padding")
-        stride =            args.get("stride")
-        activation =        args.get("activation")
-        shape = [filters_shape[0],filters_shape[1],model.out_shape[2],n_filters]
-        name = "conv_rotat"+str(len(model.layers))
-        
-        layer = Convolutional_Layer_Rotat(shape, name , model.out, padding=padding, stride=stride, activation=activation)
-        
-        model.out_shape = layer.out.shape.as_list()[1:4]
-        
-        return layer
-        
-    if ltype == "conv_rotatV2":
-        n_filters =         args.get("n_filters")
-        filters_shape =     args.get("filters_shape")
-        padding =           args.get("padding")
-        stride =            args.get("stride")
-        activation =        args.get("activation")
-        shape = [filters_shape[0],filters_shape[1],model.out_shape[2],n_filters]
-        name = "conv_rotat"+str(len(model.layers))
-        
-        layer = Convolutional_Layer_RotatV2(shape, name , model.out, padding=padding, stride=stride, activation=activation)
-        
-        model.out_shape = layer.out.shape.as_list()[1:4]
-        
-        return layer
-        
-    if ltype == "max_pool":#make a class_wrapper
-        k = args.get("k")
-        stride = args.get("stride")
-        layer = cnn_lib.maxpool2d(model.out, k, stride)
-        model.out_shape[0] = int(model.out_shape[0]/2)
-        model.out_shape[1] = int(model.out_shape[1]/2)
-        
-        return Generic_Layer(layer)
-        
-    if ltype == "flatten":#make a class_wrapper
-        layer = cnn_lib.flatten(model.out)
-        model.out_shape = [model.out_shape[0]*model.out_shape[1]*model.out_shape[2]]        
-        return Generic_Layer(layer)
-                
-    if ltype == "dense":
-        n_filters =         args.get("n_filters")
-        activation =        args.get("activation")
-        
-        layer = Dense_Layer([model.out_shape[0],n_filters], "dense"+str(len(model.layers)), model.out,activation=activation)
-        model.out_shape[0] = n_filters
-        return layer
-        
-    if ltype == "denseV2":
-        n_filters =         args.get("n_filters")
-        activation =        args.get("activation")
-        
-        layer = Dense_LayerV2([model.out_shape[0],n_filters], "dense"+str(len(model.layers)), model.out,activation=activation)
-        model.out_shape[0] = n_filters//4
-        
-        return layer
-        
-    if ltype == "out":
-        n_filters = args.get("n_filters")
-        layer = Dense_Layer([model.out_shape[0],n_filters], "out"+str(len(model.layers)), model.out, activation="linear")
-        model.out_shape[0] = n_filters
-        return layer
-        
-    if ltype == "batchnorm":
-        n_filters = args.get("n_filters")
-        name = "bn"+str(len(model.layers))
-        phase_train = model.phase_train
-        moments = args.get("moments")
-        layer = Batchnorm_Layer(n_filters,name,model.out,phase_train,moments)
-        return layer
-        
-"""
-    BETTER LIB FOR CONVNETS (MORE GENERAL)
-    TODO EXP_MOVING_WEIGHTS
-"""
-
-class Generic_Layer():# MAX_POOL, FLATTEN, ...
-    def __init__(self,layer):
-        self.out = layer
-        
-class Convolutional_Layer():
-    def __init__(self, shape, name, inp, padding = None , stride = None, activation = None):
-
-        padding = "VALID" if padding == None else padding
-        stride = 1 if stride == None else stride    
-        activation = "relu" if activation == None else activation 
-            
-        self.name = name
-        self.shape = shape
-        
-        with tf.variable_scope(name) as scope:       
-            self.W = Param(shape,"W",initializer("normal",np.sqrt(2/(shape[0]*shape[1]*shape[3]))))
-            self.b = Param(shape[3],"b",initializer("constant",0.0))
-            self.out = cnn_lib.conv2d(inp,self.W.value,self.b.value,stride=stride,padding=padding)            
-            self.out = cnn_lib.activation(self.out,activation)
-            
-        
-class Convolutional_Layer_Rotat():
-    def __init__(self, shape, name, inp, padding = None , stride = None, activation = None):
-        
-        padding = "VALID" if padding == None else padding
-        stride = 1 if stride == None else stride    
-        activation = "relu" if activation == None else activation 
-        
-        self.name = name
-        self.shape = shape
-        W_shape = shape.copy()
-        W_shape[3]=int(W_shape[3]/4)
-        with tf.variable_scope(name) as scope:       
-            self.W = Param(W_shape,"W",initializer("normal",np.sqrt(2/(shape[0]*shape[1]*shape[3]))))
-            self.b = Param(W_shape[3],"b",initializer("constant",0.0))
-            
-            layers = []
-            W = self.W.value
-            for i in range(4):
-                layers.append(cnn_lib.conv2d(inp,W,self.b.value,stride=stride,padding=padding))
-                W = cnn_lib.rotate(W)
-                #self.out = cnn_lib.conv2d(inp,self.W.value,self.b.value,stride=stride,padding=padding) 
-            layer = tf.concat(layers,axis = 3)
-            self.out = cnn_lib.activation(layer,activation)
-            
-class Convolutional_Layer_RotatV2():
-    def __init__(self, shape, name, inp, padding = None , stride = None, activation = None):
-        
-        padding = "VALID" if padding == None else padding
-        stride = 1 if stride == None else stride    
-        activation = "relu" if activation == None else activation 
-        
-        self.name = name
-        self.shape = shape
-        W_shape = shape.copy()
-        W_shape[3]=int(W_shape[3]/4)
-        with tf.variable_scope(name) as scope:       
-            self.W = Param(W_shape,"W",initializer("normal",np.sqrt(2/(shape[0]*shape[1]*shape[3]))))
-            self.b = Param(W_shape[3],"b",initializer("constant",0.0))
-            
-            layers = []
-            W = self.W.value
-            for i in range(4):
-                layers.append(cnn_lib.conv2d(inp,W,self.b.value,stride=stride,padding=padding))
-                W = cnn_lib.rotate(W)
-                #self.out = cnn_lib.conv2d(inp,self.W.value,self.b.value,stride=stride,padding=padding) 
-            layer = tf.stack(layers,axis = 4)
-            layer = tf.reduce_max(layer,axis=4)            
-            self.out = cnn_lib.activation(layer,activation)
-        
-        
-class Dense_Layer():
-    def __init__(self, shape, name, inp, activation = None):
-        
-        activation = "relu" if activation == None else activation 
-        
-        self.name = name
-        self.shape = shape
-        
-        with tf.variable_scope(name) as scope:       
-            self.W = Param(shape,"W",initializer("normal",np.sqrt(2/shape[0])))
-            self.b = Param(shape[1],"b",initializer("constant",0.0))
-            self.out = cnn_lib.dense(inp,self.W.value,self.b.value)
-            self.out = cnn_lib.activation(self.out,activation)
-
-
-class Dense_LayerV2():
-    def __init__(self, shape, name, inp, activation = None):
-        
-        activation = "relu" if activation == None else activation 
-        
-        self.name = name
-        self.shape = shape
-        
-        with tf.variable_scope(name) as scope:       
-            self.W = Param(shape,"W",initializer("normal",np.sqrt(2/shape[0])))
-            self.b = Param(shape[1],"b",initializer("constant",0.0))
-            layer = cnn_lib.dense(inp,self.W.value,self.b.value)
-            
-            self.out = tf.reduce_max(tf.reshape(layer,[-1,shape[1]//4,4]),axis=2)
-            self.out = cnn_lib.activation(self.out,activation)
-
-
-class Batchnorm_Layer():
-     def __init__(self, channels, name, inp, phase_train ,moments=[0,1,2]):  
-         
-         with tf.variable_scope(name) as scope:
-             self.gamma = Param([channels],"gamma",initializer("constant",1.0)) 
-             self.beta = Param([channels],"beta",initializer("constant",0.0))
-             
-             self.ema = tf.train.ExponentialMovingAverage(decay=0.8)
-             self.batch_mean, self.batch_var = tf.nn.moments(inp,moments)
-             
-             def mean_var_with_update():
-                ema_apply_op = self.ema.apply([self.batch_mean, self.batch_var])
-                with tf.control_dependencies([ema_apply_op]):
-                    return tf.identity(self.batch_mean), tf.identity(self.batch_var)
-            
-             mean,var = tf.cond(phase_train,mean_var_with_update,lambda: (self.ema.average(self.batch_mean),
-                                                                         self.ema.average(self.batch_var)))
-            
-         self.out = tf.nn.batch_normalization(inp,mean,var,self.beta.value,self.gamma.value,1e-3)
-             
-    
-class Param():
-    def __init__(self, shape, name, initializer):
-        self.value = tf.get_variable(name,shape,initializer=initializer)
-        self.shape = shape
-        self.name = name
-        
-        
-def initializer(i_type,param):
-    if i_type == "normal":
-        return tf.random_normal_initializer(stddev=param)
-    elif i_type == "constant":
-        return tf.constant_initializer(param)
- 
-
 #alex = alexMet_rotat(3)
 
 

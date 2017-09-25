@@ -144,7 +144,7 @@ def maxpool2d(inp,k=2,stride=None):
 
 
 def full_image_max_pool(inp,k=2):
-    layer = tf.nn.max_pool(inp,ksize=[1,k,k,1],strides = [1,k,k,1],padding="SAME")
+    layer = tf.nn.max_pool(inp,ksize=[1,k,k,1],strides = [1,1,1,1],padding = "SAME")
     return strided(layer)
 """
 Flattens a tensor. Used before the fully connected part of a network
