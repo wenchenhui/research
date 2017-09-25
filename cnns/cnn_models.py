@@ -4,69 +4,79 @@ Created on Tue Aug  8 10:16:07 2017
 
 @author: eduardo
 """
+import sys
+sys.path.append("/home/eduardo/research/research/")
 import cnns.cnn_lib as cnn_lib
 import tensorflow as tf
 import numpy as np
 
 
-def detector36(full_img = False):
+def detector36(full_img = False,scope_name="model1",reuse = False):
     """    
     conv1   3x3     32 filters    
     conv2   3x3     32 filters
     max_pool    
     
-    conv3   3x3     128 filters
-    conv4   3x3     128 filters
+    conv3   3x3     64 filters
+    conv4   3x3     64 filters
     max_pool
     
     dense1          256 filters
     dense2          256 filters
     output          2 filters
     """    
-    
-    if full_img:
-        model = Test_model()
-    else:
-        model = Model([36,36])
-    
-    model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 32)
-    model.add_easy_layer(ltype = "batchnorm",n_filters = 32, moments=[0,1,2])   
-    model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 32)
-    model.add_easy_layer(ltype = "batchnorm",n_filters = 32, moments=[0,1,2])   
-    model.add_easy_layer(ltype="max_pool",k=2, stride=2)
-    model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 64)
-    model.add_easy_layer(ltype = "batchnorm",n_filters = 64, moments=[0,1,2])   
-    model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 64)
-    model.add_easy_layer(ltype = "batchnorm",n_filters = 64, moments=[0,1,2])   
-    model.add_easy_layer(ltype="max_pool",k=2, stride=2)
-    model.add_easy_layer(ltype="flatten")
-    model.add_easy_layer(ltype="dense", n_filters = 256)
-    model.add_easy_layer(ltype = "batchnorm",n_filters = 256, moments=[0])   
-    model.add_easy_layer(ltype="dense", n_filters = 256)
-    model.add_easy_layer(ltype = "batchnorm",n_filters = 256, moments=[0])   
-    model.add_easy_layer(ltype="out", n_filters = 2)
-    
-    model._compile()
+    with tf.variable_scope(scope_name,reuse=reuse) as scope:
+        if full_img:
+            model = Test_model()
+        else:
+            model = Model([36,36])
+        
+        model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 32)
+        #model.add_easy_layer(ltype = "batchnorm",n_filters = 32, moments=[0,1,2])   
+        model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 32)
+        #model.add_easy_layer(ltype = "batchnorm",n_filters = 32, moments=[0,1,2])   
+        model.add_easy_layer(ltype="max_pool",k=2, stride=2)
+        model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 64)
+        #model.add_easy_layer(ltype = "batchnorm",n_filters = 64, moments=[0,1,2])   
+        model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 64)
+        #model.add_easy_layer(ltype = "batchnorm",n_filters = 64, moments=[0,1,2])   
+        model.add_easy_layer(ltype="max_pool",k=2, stride=2)
+        model.add_easy_layer(ltype="flatten")
+        model.add_easy_layer(ltype="dense", n_filters = 256, conv_shape = [6,6])# CONV SHAPE
+        #model.add_easy_layer(ltype = "batchnorm",n_filters = 256, moments=[0])   
+        model.add_easy_layer(ltype="dense", n_filters = 256, conv_shape = [1,1])# CONV SHAPE
+        #model.add_easy_layer(ltype = "batchnorm",n_filters = 256, moments=[0])   
+        model.add_easy_layer(ltype="out", n_filters = 2, conv_shape = [1,1])
+        
+        model._compile()
     
     return model
 
 
 class Test_model():
-    def __init__(self,in_channels):
-        self.inp= tf.placeholder(tf.float32,[None,None,None,in_channels])
-        self.phase_train = False
-        self.keep_prob = 1.0
+    def __init__(self,in_channels=1):
+        self.inp= tf.placeholder(tf.float32,[1,200,200,in_channels])
+        self.phase_train = tf.placeholder(tf.bool,[])
+        self.keep_prob = tf.placeholder(tf.float32,[])
         self.out = self.inp
-        self.out_shape = [inp_shape[0],inp_shape[1],self.in_channels]
+        self.out_shape = [None,None,in_channels]
         self.layers = []
         
     def add_easy_layer(self,**params):
-        layer = easy_test_layer(self,**params)
+        layer = test_easy_layer(self,**params)
         self.layers.append(layer)
         self.out = layer.out
         
-    def test(self,img):
-    
+    def test(self,sess,img):
+        result = sess.run([self.pred],feed_dict={self.inp:img, self.phase_train:False, self.keep_prob:1})
+        return cnn_lib.mult_unstrided(result[0][:,:,:,1],2)
+        
+    def test_layer(self,sess,batchx,l_num):
+        return sess.run([self.layers[l_num].out],feed_dict = {self.inp:batchx, self.phase_train:False, self.keep_prob:1})
+        
+    def _compile(self, **params):
+        self.pred = tf.nn.softmax(self.out)
+        return
     
 class Model():
     def __init__(self, inp_shape, in_channels=1):
@@ -86,6 +96,7 @@ class Model():
         self.out = layer.out
         return
         
+    
     def _compile(self,add_loss = None):
         self.pred = tf.nn.softmax(self.out)
         
@@ -113,6 +124,9 @@ class Model():
     def test(self,sess,batchx,batchy):
         return sess.run([self.loss, self.pred],feed_dict={self.inp:batchx, self.y:batchy, self.phase_train:False, self.keep_prob:1})
     
+    def test_layer(self,sess,batchx,l_num):
+        return sess.run([self.layers[l_num].out],feed_dict = {self.inp:batchx, self.phase_train:False, self.keep_prob:1})
+        
     def test_loss_acc(self,sess,batchx,batchy):
         return 0
         
@@ -250,14 +264,13 @@ def test_easy_layer(model, **args):
         k = args.get("k")
         stride = args.get("stride")
         layer = cnn_lib.full_image_max_pool(model.out)
-        layer = cnn_lib.strided(layer)        
+        #layer = cnn_lib.strided(layer)        
         model.out_shape[0] = int(model.out_shape[0]/2)
         model.out_shape[1] = int(model.out_shape[1]/2)
         
         return Generic_Layer(layer)
         
     if ltype == "flatten":#make a class_wrapper
-        model.out_shape = [model.out_shape[0]*model.out_shape[1]*model.out_shape[2]]        
         return Generic_Layer(model.out)
     
     if ltype == "dropout":#make a class_wrapper
@@ -266,16 +279,20 @@ def test_easy_layer(model, **args):
                 
     if ltype == "dense":
         n_filters =         args.get("n_filters")
+        conv_shape =      args.get("conv_shape")
+        conv_shape = [conv_shape[0],conv_shape[1],model.out_shape[2],n_filters]
         activation =        args.get("activation")
-        
-        layer = Dense_Layer([model.out_shape[0],n_filters], "dense"+str(len(model.layers)), model.out,activation=activation)
-        model.out_shape[0] = n_filters
+
+        layer = Dense_Convolutional_Layer(conv_shape, "dense"+str(len(model.layers)), model.out,activation=activation)
+        model.out_shape[2] = n_filters
         return layer
         
     if ltype == "out":
         n_filters = args.get("n_filters")
-        layer = Dense_Layer([model.out_shape[0],n_filters], "out"+str(len(model.layers)), model.out, activation="linear")
-        model.out_shape[0] = n_filters
+        conv_shape =      args.get("conv_shape")
+        conv_shape = [conv_shape[0],conv_shape[1],model.out_shape[2],n_filters]
+        layer = Dense_Convolutional_Layer(conv_shape, "out"+str(len(model.layers)), model.out,activation="linear")
+        model.out_shape[2] = n_filters
         return layer
         
 """
@@ -299,6 +316,25 @@ class Convolutional_Layer():
         
         with tf.variable_scope(name) as scope:       
             self.W = Param(shape,"W",initializer("normal",np.sqrt(2/(shape[0]*shape[1]*shape[3]))))
+            self.b = Param(shape[3],"b",initializer("constant",0.0))
+            self.out = cnn_lib.conv2d(inp,self.W.value,self.b.value,stride=stride,padding=padding)            
+            self.out = cnn_lib.activation(self.out,activation)
+      
+#TODO      
+class Dense_Convolutional_Layer():
+    def __init__(self, shape, name, inp, padding = None , stride = None, activation = None):
+
+        padding = "VALID" if padding == None else padding
+        stride = 1 if stride == None else stride    
+        activation = "relu" if activation == None else activation 
+            
+        self.name = name
+        self.shape = shape
+        
+        with tf.variable_scope(name) as scope:       
+            self.W = Param([shape[0]*shape[1]*shape[2],shape[3]],"W",initializer("normal",np.sqrt(2/(shape[0]*shape[1]*shape[3]))))
+            self.W.shape = shape
+            self.W.value = tf.reshape(self.W.value,shape)
             self.b = Param(shape[3],"b",initializer("constant",0.0))
             self.out = cnn_lib.conv2d(inp,self.W.value,self.b.value,stride=stride,padding=padding)            
             self.out = cnn_lib.activation(self.out,activation)
@@ -412,6 +448,7 @@ class Param():
         self.value = tf.get_variable(name,shape,initializer=initializer)
         self.shape = shape
         self.name = name
+        print(tf.get_variable_scope().name)
         
         
 def initializer(i_type,param):
@@ -653,9 +690,27 @@ def mnist_arch(rotat=False,v1=False):
     model._compile()
     
     return model
-#alex = alexMet_rotat(3)
+
+model = detector36(False,scope_name="model",reuse=False)
+model_full = detector36(True,scope_name="model",reuse=True)
+
+sess = tf.Session()
+sess.run(tf.global_variables_initializer())
+img = np.random.rand(200,200)
+result = np.zeros((200,200))
+patch = np.zeros((1,36,36,1))
+fakey = np.zeros((1))
+
+result2 = np.squeeze(model_full.test(sess,img[np.newaxis,:,:,np.newaxis]))
+#patch[0,:,:,0] = np.squeeze(img[100-18:100+18,100-18:100+18])
+#result = np.squeeze(model.test_layer(sess,patch,9)[0])
 
 
+for i in range(20,img.shape[0]-20):
+    print(i)
+    for j in range(20,img.shape[1]-20):
+        patch[0,:,:,0] = img[i-18:i+18,j-18:j+18]
+        result[i,j] = model.test(sess,patch,fakey)[1][0][1]
 
 """
 # CLASS FOR A TYPICAL CNN MODEL

@@ -24,7 +24,7 @@ def train_loop(experiment_name, model_number, dataset_path):
     """
     #experiment_name = "test_experiment"
     #model_number = 1 # DEFINES IF THIS IS THE FIRST OR SECOND MODEL IN THE CASCADE
-    model = models.detector36() # MODEL ARCHITECTURE
+    model = models.detector36(False, "model"+str(model_number), False) # MODEL ARCHITECTURE
     
     
     # LEARNING PARAMETERS
@@ -172,3 +172,30 @@ def train_loop(experiment_name, model_number, dataset_path):
     log_file.close()
     np.save(metrics_save_path,metrics_array[0:epoch_counter,:])
     sess.close()
+    
+
+# TODO WITH MODEL NUMBER: IDEA -> Use recursion
+def test_model(model_num, results_path):
+    load_weights_path = results_path+"/model1"    
+    model,model_full = load_model()
+    
+    for image in images: # TODO
+        image = np.load(image)
+        htmap = model_full.test(sess,image)
+        htmap = smooth_map(htmap)
+        maximums = compute_local_maxima()
+        
+        
+    
+    
+def load_model(sess,model_num,load_weights_path):
+    model = models.detector36(False, "model"+str(model_number), False)
+    model.load(sess,load_weights_path)    
+    model_full = models.detector36(True, "model"+str(model_number), True)    
+    return model,model_full
+    
+def smooth_map():
+    
+    
+def compute_local_maxima():
+    
