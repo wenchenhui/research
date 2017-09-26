@@ -112,7 +112,8 @@ def _load_preprocess_save_image(file,patient,image_ids):
     img = img.astype(np.uint8)
     
     # Apply CLAHE method [2]
-    img = _clahe_op.apply(img)
+    if _clahe:
+        img = _clahe_op.apply(img)
     
     # Resize image
     img = cv2.resize(img,(0,0),fx = _scale,fy = _scale)

@@ -11,7 +11,7 @@ import os
 
 scale = 1/24
 
-for clahe in [True]:
+for clahe in [False,True]:
 
     src_location = "/media/eduardo/TOSHIBA EXT/"
     folder_images = "raw CBIS mass/DOI/"
@@ -44,11 +44,12 @@ for clahe in [True]:
         dataset.make_patches_dataset(no_transformations,use_rotations,use_mirroring,use_elastic_deform,debug)
         dataset.save(dst_location)
     else:
+        print("Loading dataset")
         dataset = pkl.load(open(dst_location+"/dataset_test","rb"))
     
     train_loop.train_loop("clahe_"+str(clahe),1,dst_location)    
     all_suspicions = train_loop.test_model(1,"clahe_"+str(clahe),dataset)
-    #input("next?")
+    
 
 
 

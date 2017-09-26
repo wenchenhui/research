@@ -183,6 +183,7 @@ def test_model(model_num, experiment_name, dataset_first):
     sess = tf.Session()
     
     results_path = "/home/eduardo/Results/"+experiment_name
+    os.mkdir(results_path+"/heat_maps"+str(model_num))
     load_weights_path = results_path+"/model1"    
     model,model_full = load_model(sess,model_num,load_weights_path)
     iDs = dataset_first.files_names.keys()
@@ -196,6 +197,7 @@ def test_model(model_num, experiment_name, dataset_first):
         htmap = model_full.test(sess,image)
         htmap = iproc.filter_img(htmap)
         htmap = iproc.improved_non_maxima_supression(htmap)
+        np.save(results_path+"/heatmaps/"+os.path.basename(dataset_first.files_names[iD]),htmap)
         dets = iproc.detections(htmap,10)
         
         masks = []
@@ -260,7 +262,8 @@ def compute_score(all_suspicions,results_path=""):
     
     plt.scatter(fpi_vec,tpr_vec,s=0.1)
     pkl.dump([fpi_vec,tpr_vec],open(results_path+"/fpi_tpr_vecs","wb"))
-    plt.show()
+    
+    plt.savefig(results_path+"/Free_Roc_Curve")
     
     return final,fpi_vec,tpr_vec
         
