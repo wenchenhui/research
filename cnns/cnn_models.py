@@ -9,7 +9,7 @@ sys.path.append("/home/eduardo/research/research/")
 import cnns.cnn_lib as cnn_lib
 import tensorflow as tf
 import numpy as np
-
+import funcs.image_processing as i_proc
 
 def detector36(full_img = False,scope_name="model1",reuse = False):
     """    
@@ -55,7 +55,7 @@ def detector36(full_img = False,scope_name="model1",reuse = False):
 
 class Test_model():
     def __init__(self,in_channels=1):
-        self.inp= tf.placeholder(tf.float32,[1,200,200,in_channels])
+        self.inp= tf.placeholder(tf.float32,[1,400,400,in_channels])
         self.phase_train = tf.placeholder(tf.bool,[])
         self.keep_prob = tf.placeholder(tf.float32,[])
         self.out = self.inp
@@ -68,8 +68,14 @@ class Test_model():
         self.out = layer.out
         
     def test(self,sess,img):
-        result = sess.run([self.pred],feed_dict={self.inp:img, self.phase_train:False, self.keep_prob:1})
-        return cnn_lib.mult_unstrided(result[0][:,:,:,1],2)
+        original_shape = img.shape         
+        img = i_proc.all_pad(img,20,"reflect")
+        img = i_proc.complete_size(img,(400,400))[np.newaxis,:,:,np.newaxis]
+        res_img = sess.run([self.pred],feed_dict={self.inp:img, self.phase_train:False, self.keep_prob:1})
+        res_img = np.squeeze(cnn_lib.mult_unstrided(res_img[0][:,:,:,1],2))
+        res_img = i_proc.all_pad_remove(res_img,2)
+        res_img = i_proc.restore_size(res_img,original_shape)
+        return res_img
         
     def test_layer(self,sess,batchx,l_num):
         return sess.run([self.layers[l_num].out],feed_dict = {self.inp:batchx, self.phase_train:False, self.keep_prob:1})
@@ -690,28 +696,37 @@ def mnist_arch(rotat=False,v1=False):
     model._compile()
     
     return model
+    
+if False:
 
-model = detector36(False,scope_name="model",reuse=False)
-model_full = detector36(True,scope_name="model",reuse=True)
+    model = detector36(False,scope_name="model",reuse=False)
+    model_full = detector36(True,scope_name="model",reuse=True)
+    
+    sess = tf.Session()
+    sess.run(tf.global_variables_initializer())
+    img = np.random.rand(200,200)
+    result = np.zeros((200,200))
+    patch = np.zeros((1,36,36,1))
+    fakey = np.zeros((1))
+    
+    result2 = np.squeeze(model_full.test(sess,img))
+    #patch[0,:,:,0] = np.squeeze(img[100-18:100+18,100-18:100+18])
+    #result = np.squeeze(model.test_layer(sess,patch,9)[0])
+    
+    
+    for i in range(20,img.shape[0]-20):
+        print(i)
+        for j in range(20,img.shape[1]-20):
+            patch[0,:,:,0] = img[i-18:i+18,j-18:j+18]
+            result[i,j] = model.test(sess,patch,fakey)[1][0][1]
+    
 
-sess = tf.Session()
-sess.run(tf.global_variables_initializer())
-img = np.random.rand(200,200)
-result = np.zeros((200,200))
-patch = np.zeros((1,36,36,1))
-fakey = np.zeros((1))
-
-result2 = np.squeeze(model_full.test(sess,img[np.newaxis,:,:,np.newaxis]))
-#patch[0,:,:,0] = np.squeeze(img[100-18:100+18,100-18:100+18])
-#result = np.squeeze(model.test_layer(sess,patch,9)[0])
 
 
-for i in range(20,img.shape[0]-20):
-    print(i)
-    for j in range(20,img.shape[1]-20):
-        patch[0,:,:,0] = img[i-18:i+18,j-18:j+18]
-        result[i,j] = model.test(sess,patch,fakey)[1][0][1]
 
+
+
+# OBSOLETE
 """
 # CLASS FOR A TYPICAL CNN MODEL
 class Model():

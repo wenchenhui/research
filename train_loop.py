@@ -11,7 +11,9 @@ import funcs.utils as ut
 import cnns.cnn_models as models
 import numpy as np
 import os
-
+import funcs.image_processing as iproc
+from matplotlib import pyplot as plt
+import pickle as pkl
 
 def print_s(string,file):
     print(string)
@@ -30,7 +32,7 @@ def train_loop(experiment_name, model_number, dataset_path):
     # LEARNING PARAMETERS
     learning_rate = 0.0001
     
-    training_iterations = int(2e3)  # TRAINING ITERATIONS
+    training_iterations = int(5e3)  # TRAINING ITERATIONS
     one_epoch_every = 1e2           # ITERATIONS PER EPOCH 
     number_of_epochs = int(training_iterations/one_epoch_every)+1
     
@@ -175,27 +177,110 @@ def train_loop(experiment_name, model_number, dataset_path):
     
 
 # TODO WITH MODEL NUMBER: IDEA -> Use recursion
-def test_model(model_num, results_path):
+def test_model(model_num, experiment_name, dataset_first):
+    
+    tf.reset_default_graph()
+    sess = tf.Session()
+    
+    results_path = "/home/eduardo/Results/"+experiment_name
     load_weights_path = results_path+"/model1"    
-    model,model_full = load_model()
+    model,model_full = load_model(sess,model_num,load_weights_path)
+    iDs = dataset_first.files_names.keys()
     
-    for image in images: # TODO
-        image = np.load(image)
+    all_suspicions = dict()
+    bar = ut.progress_bar(len(iDs))
+    for iD in iDs: # TODO
+        bar.tick()
+        all_suspicions[iD] = list()
+        image = np.load(dataset_first.files_names[iD])
         htmap = model_full.test(sess,image)
-        htmap = smooth_map(htmap)
-        maximums = compute_local_maxima()
+        htmap = iproc.filter_img(htmap)
+        htmap = iproc.improved_non_maxima_supression(htmap)
+        dets = iproc.detections(htmap,10)
         
+        masks = []
+        masks_files = dataset_first.masks[iD]
+        for file in masks_files:
+            mask = np.load(file)
+            masks.append(mask)
         
+        masks_hit = np.zeros(len(masks))
+        for det in dets:
+            correct_mask = inside_masks(det,masks,masks_hit)
+            if correct_mask!=-1:
+                if not masks_hit[correct_mask]:
+                    all_suspicions[iD].append([*det,"TP"])
+                    masks_hit[correct_mask]=1
+            else:
+                all_suspicions[iD].append([*det,"FP"])
+        
+        for i in range(len(masks_hit)):
+            if masks_hit[i] == 0:
+                all_suspicions[iD].append([-1,-1,"FN"])
     
+    pkl.dump(all_suspicions,open(results_path+"/all_suspicions","wb"))
+    compute_score(all_suspicions,results_path) 
+    
+    sess.close()
+
+    return all_suspicions
+    
+def compute_score(all_suspicions,results_path=""):
+    num_of_masses = 0    
+    num_of_images = 0
+    for image in all_suspicions.keys():
+        num_of_images+=1
+        for susp in all_suspicions[image]:
+            if susp[2] in ["TP","FN"]:
+                num_of_masses+=1
+    
+    print("Working with:",num_of_masses," masks")
+    print("Working with:",num_of_masses," images")    
+    
+    tp = np.zeros(num_of_masses)
+    fp = list()
+    counter=0
+    for image in all_suspicions.keys():
+        for susp in all_suspicions[image]:
+            if susp[2] == "TP":
+                tp[counter] = susp[1]
+                counter+=1
+            elif susp[2] == "FP":
+                fp.append(susp[1])
+    
+            
+    finalTP = np.stack((tp,np.ones(tp.shape)),axis=1)
+    fp = np.array(fp)    
+    finalFP = np.stack((fp,np.zeros(fp.shape)),axis=1)
+    final = np.concatenate((finalTP,finalFP),axis = 0)
+    indexes = np.argsort(final[:,0])
+    final[:] = final[indexes[::-1]]
+    tpr_vec = np.cumsum(final[:,1])/num_of_masses
+    fpi_vec = np.cumsum(final[:,1]==0)/num_of_images
+    
+    plt.scatter(fpi_vec,tpr_vec,s=0.1)
+    pkl.dump([fpi_vec,tpr_vec],open(results_path+"/fpi_tpr_vecs","wb"))
+    plt.show()
+    
+    return final,fpi_vec,tpr_vec
+        
+def inside_masks(det,masks,masks_hit):
+    for i in range(masks_hit.shape[0]):
+        center = det[0]
+        mask = masks[i]
+        #plt.imshow(mask)
+        #plt.show()
+        #print(center)
+        if mask[center[0],center[1]]:
+            return i
+    
+    return -1
     
 def load_model(sess,model_num,load_weights_path):
-    model = models.detector36(False, "model"+str(model_number), False)
+    model = models.detector36(False, "model"+str(model_num), False)
     model.load(sess,load_weights_path)    
-    model_full = models.detector36(True, "model"+str(model_number), True)    
+    model_full = models.detector36(True, "model"+str(model_num), True)    
     return model,model_full
     
-def smooth_map():
-    
-    
-def compute_local_maxima():
+
     
