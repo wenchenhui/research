@@ -177,13 +177,13 @@ def train_loop(experiment_name, model_number, dataset_path):
     
 
 # TODO WITH MODEL NUMBER: IDEA -> Use recursion
-def test_model(model_num, experiment_name, dataset_first):
+def test_model(model_num, experiment_name, dataset_first,sigma=2,num_dets=10,thresh=0.5,sufix=""):
     
     tf.reset_default_graph()
     sess = tf.Session()
     
     results_path = "/home/eduardo/Results/"+experiment_name
-    os.mkdir(results_path+"/heat_maps"+str(model_num))
+    #os.mkdir(results_path+"/heatmaps"+str(model_num))
     load_weights_path = results_path+"/model1"    
     model,model_full = load_model(sess,model_num,load_weights_path)
     iDs = dataset_first.files_names.keys()
@@ -195,15 +195,17 @@ def test_model(model_num, experiment_name, dataset_first):
         all_suspicions[iD] = list()
         image = np.load(dataset_first.files_names[iD])
         htmap = model_full.test(sess,image)
-        htmap = iproc.filter_img(htmap)
+        htmap = iproc.filter_img(htmap,sigma)
+        htmap = htmap*(htmap>thresh)
         htmap = iproc.improved_non_maxima_supression(htmap)
-        np.save(results_path+"/heatmaps/"+os.path.basename(dataset_first.files_names[iD]),htmap)
-        dets = iproc.detections(htmap,10)
+        #np.save(results_path+"/heatmaps"+str(model_num)+"/"+os.path.basename(dataset_first.files_names[iD]),htmap)
+        dets = iproc.detections(htmap,num_dets)
         
         masks = []
         masks_files = dataset_first.masks[iD]
         for file in masks_files:
             mask = np.load(file)
+            mask = augment_mask(mask)
             masks.append(mask)
         
         masks_hit = np.zeros(len(masks))
@@ -220,14 +222,23 @@ def test_model(model_num, experiment_name, dataset_first):
             if masks_hit[i] == 0:
                 all_suspicions[iD].append([-1,-1,"FN"])
     
-    pkl.dump(all_suspicions,open(results_path+"/all_suspicions","wb"))
-    compute_score(all_suspicions,results_path) 
+    pkl.dump(all_suspicions,open(results_path+"/all_suspicions"+sufix,"wb"))
+    compute_score(all_suspicions,results_path,sufix) 
     
     sess.close()
 
     return all_suspicions
     
-def compute_score(all_suspicions,results_path=""):
+from scipy.ndimage.measurements import center_of_mass as center_of_mass
+def augment_mask(mask):
+    center = center_of_mass(mask)   
+    mask[int(np.floor(center[0]))-9:int(np.ceil(center[0]))+9,int(np.floor(center[1]))-9:int(np.ceil(center[1]))+9] = True
+    #plt.imshow(mask)
+    #plt.show()
+    return mask
+    
+    
+def compute_score(all_suspicions,results_path="",sufix=""):
     num_of_masses = 0    
     num_of_images = 0
     for image in all_suspicions.keys():
@@ -237,7 +248,7 @@ def compute_score(all_suspicions,results_path=""):
                 num_of_masses+=1
     
     print("Working with:",num_of_masses," masks")
-    print("Working with:",num_of_masses," images")    
+    print("Working with:",num_of_images," images")    
     
     tp = np.zeros(num_of_masses)
     fp = list()
@@ -261,9 +272,9 @@ def compute_score(all_suspicions,results_path=""):
     fpi_vec = np.cumsum(final[:,1]==0)/num_of_images
     
     plt.scatter(fpi_vec,tpr_vec,s=0.1)
-    pkl.dump([fpi_vec,tpr_vec],open(results_path+"/fpi_tpr_vecs","wb"))
+    pkl.dump([fpi_vec,tpr_vec],open(results_path+"/fpi_tpr_vecs"+sufix,"wb"))
     
-    plt.savefig(results_path+"/Free_Roc_Curve")
+    plt.savefig(results_path+"/Free_Roc_Curve"+sufix)
     
     return final,fpi_vec,tpr_vec
         

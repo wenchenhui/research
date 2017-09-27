@@ -8,22 +8,22 @@ import os
 """
     TEST IF CLAHE MAKES RESULTS BETTER IN CBIS-DDSM
 """
-
-scale = 1/24
+inv_scale = 24
+scale = 1/inv_scale
 
 for clahe in [False,True]:
 
     src_location = "/media/eduardo/TOSHIBA EXT/"
     folder_images = "raw CBIS mass/DOI/"
     folder_masks = "raw CBIS mass rois/DOI/"
-    dst_location = "/home/eduardo/pre_dataset_clahe_"+str(clahe)+"/"
+    dst_location = "/home/eduardo/pre_dataset_clahe_"+str(clahe)+"_"+str(inv_scale)+"/"
 
     debug = False
     if not os.path.isdir(dst_location):
         cbis_standart_format.make_CBIS_standart_format(scale,clahe,src_location,folder_images,folder_masks,dst_location,debug)
     else:
         print("PRE-DATASET ALREADY MADE")
-        
+      
     src_location = dst_location
     dst_location = "/home/eduardo/dataset_clahe_"+str(clahe)+"/"
     
@@ -35,7 +35,7 @@ for clahe in [False,True]:
         
         halfpatch= 18
     
-        no_transformations = 5
+        no_transformations = 20
         use_rotations = True
         use_mirroring = True
         use_elastic_deform = False
@@ -47,8 +47,8 @@ for clahe in [False,True]:
         print("Loading dataset")
         dataset = pkl.load(open(dst_location+"/dataset_test","rb"))
     
-    train_loop.train_loop("clahe_"+str(clahe),1,dst_location)    
-    all_suspicions = train_loop.test_model(1,"clahe_"+str(clahe),dataset)
+    train_loop.train_loop("clahe_test_"+str(clahe),1,dst_location)    
+    all_suspicions = train_loop.test_model(1,"clahe_"+str(clahe),dataset,sigma=0.8,num_dets=40)
     
 
 
