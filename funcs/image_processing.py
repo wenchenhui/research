@@ -28,7 +28,7 @@ def detections(inp,max_dets_per_img):
     dets_str = dets_str[dets_args[::-1]]
 
     final_dets = []    
-    for i in range(max_dets_per_img):
+    for i in range(min(dets_str.shape[0],max_dets_per_img)):
         final_dets.append([dets[i,:],dets_str[i]])
     return final_dets
 

@@ -14,6 +14,7 @@ import os
 import funcs.image_processing as iproc
 from matplotlib import pyplot as plt
 import pickle as pkl
+from shutil import copyfile
 
 def print_s(string,file):
     print(string)
@@ -40,8 +41,8 @@ def train_loop(experiment_name, model_number, dataset_path):
     PATH:
         RESULTS
     """
-    if model_number == 1:
-        results_path = "/home/eduardo/Results/"+experiment_name
+    results_path = "/home/eduardo/Results/"+experiment_name
+    if model_number == 1:        
         os.mkdir(results_path)
     
     
@@ -58,8 +59,8 @@ def train_loop(experiment_name, model_number, dataset_path):
         DATASET
     """
     #dataset_path = "/home/eduardo/dataset_name"
-    if model_number == 2:
-        dataset_path += "second"
+    #if model_number == 2:
+    #    dataset_path += "second"
         
     
     
@@ -81,8 +82,8 @@ def train_loop(experiment_name, model_number, dataset_path):
     
     
     
-    if load_weights_path:
-        model.load(sess,load_weights_path)
+    #if load_weights_path:
+        #model.load(sess,load_weights_path)
     
     epoch_counter = 0
     
@@ -174,6 +175,43 @@ def train_loop(experiment_name, model_number, dataset_path):
     log_file.close()
     np.save(metrics_save_path,metrics_array[0:epoch_counter,:])
     sess.close()
+    
+import glob
+def create_second_dataset(experiment_name, dataset_first):
+    
+    print("Creating Second Dataset")
+    
+    tf.reset_default_graph()
+    sess = tf.Session()
+    
+    results_path = "/home/eduardo/Results/"+experiment_name
+    dataset_second = results_path+"/second_dataset/"
+    os.mkdir(dataset_second)
+    load_weights_path = results_path+"/model1"    
+    model,model_full = load_model(sess,1,load_weights_path)
+    
+    splits = ["train","validation","test"]
+    
+    for split in splits:
+        os.makedirs(dataset_second+split+"/negative")
+        os.makedirs(dataset_second+split+"/positive")
+        print("Doing:",split)
+        neg_images = glob.glob(dataset_first+"/"+split+"/negative/*.npy")
+        pos_images = glob.glob(dataset_first+"/"+split+"/positive/*.npy")
+        bar = ut.progress_bar(len(neg_images)+len(pos_images))
+        for file in neg_images:
+            bar.tick()
+            img = np.load(file)
+            _,pred = model.test(sess,img[np.newaxis,:,:,np.newaxis],np.zeros((1,)))
+            if pred[0,1]>0.5:
+                copyfile(file,dataset_second+"/"+split+"/negative/"+os.path.basename(file))
+        
+        for file in pos_images:
+            bar.tick()
+            copyfile(file,dataset_second+"/"+split+"/positive/"+os.path.basename(file))
+    
+    copyfile(dataset_first+"/dataset_test",dataset_second+"/dataset_test")
+    print("FINISHED Creating Second Dataset")    
     
 
 # TODO WITH MODEL NUMBER: IDEA -> Use recursion
@@ -290,6 +328,7 @@ def inside_masks(det,masks,masks_hit):
     
     return -1
     
+
 def load_model(sess,model_num,load_weights_path):
     model = models.detector36(False, "model"+str(model_num), False)
     model.load(sess,load_weights_path)    

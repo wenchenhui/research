@@ -5,14 +5,39 @@ import train_loop
 import pickle as pkl
 import os
 
+
+
+
+
+
+
+
+
+
+
+
 """
     TEST IF CLAHE MAKES RESULTS BETTER IN CBIS-DDSM
 """
+
+
+experiment_name = "elastic_deforms_"+str(True)
+data_location = "/home/eduardo/Results/"+experiment_name+"/second_dataset/"
+
+train_loop.train_loop("elastic_deforms_"+str(True),2,data_location)    
+
+
+#train_loop.create_second_dataset("elastic_deforms_"+str(True),"/home/eduardo/dataset_elastic_trans_True/")
+
+input("CONTINUE?")
+
+input("SURE?")
+
 inv_scale = 24
 scale = 1/inv_scale
 
-for clahe in [False,True]:
-
+for use_elastic_deform in [True]:
+    clahe = True
     src_location = "/media/eduardo/TOSHIBA EXT/"
     folder_images = "raw CBIS mass/DOI/"
     folder_masks = "raw CBIS mass rois/DOI/"
@@ -25,7 +50,7 @@ for clahe in [False,True]:
         print("PRE-DATASET ALREADY MADE")
       
     src_location = dst_location
-    dst_location = "/home/eduardo/dataset_clahe_"+str(clahe)+"/"
+    dst_location = "/home/eduardo/dataset_elastic_trans_"+str(clahe)+"/"
     
     set_masses_size = {"train":491,"validation":100,"test":100}
     set_neg_size = {"train":0,"validation":0,"test":0}
@@ -35,10 +60,10 @@ for clahe in [False,True]:
         
         halfpatch= 18
     
-        no_transformations = 20
+        no_transformations = 40
         use_rotations = True
         use_mirroring = True
-        use_elastic_deform = False
+        #use_elastic_deform = True
         
         debug = False
         dataset.make_patches_dataset(no_transformations,use_rotations,use_mirroring,use_elastic_deform,debug)
@@ -47,8 +72,9 @@ for clahe in [False,True]:
         print("Loading dataset")
         dataset = pkl.load(open(dst_location+"/dataset_test","rb"))
     
-    train_loop.train_loop("clahe_test_"+str(clahe),1,dst_location)    
-    all_suspicions = train_loop.test_model(1,"clahe_"+str(clahe),dataset,sigma=0.8,num_dets=40)
+    
+    train_loop.train_loop("elastic_deforms_"+str(use_elastic_deform),1,dst_location)    
+    all_suspicions = train_loop.test_model(1,"elastic_deforms_"+str(use_elastic_deform),dataset,sigma=0.8,num_dets=40)
     
 
 

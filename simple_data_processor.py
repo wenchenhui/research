@@ -34,6 +34,10 @@ import cv2
 import random
 import funcs.utils as ut
 
+
+_SEED = 1917
+
+
 # CONTANTS
 sqrt2 = np.sqrt(2)
 trans_const = (sqrt2-1)/2
@@ -148,6 +152,7 @@ def make_dataset(set_masses_size, set_neg_size, src_loc, dst_loc):
             no_masses.append(patient)
     
     # SHUFFLE SO WE CAN OBTAIN DIFFERENT DATA DISTRIBUTION EACH TIME
+    random.seed(_SEED)
     random.shuffle(with_masses)
     random.shuffle(no_masses)
     
