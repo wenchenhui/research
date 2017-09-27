@@ -55,17 +55,23 @@ def create_first_dataset(src_location, dataset_name, use_elastic_deform, no_tran
     debug = False
     dataset.make_patches_dataset(no_transformations,use_rotations,use_mirroring,use_elastic_deform,debug)
     dataset.save(dst_location)
+    return dataset
 
 def load_dataset(dataset_name, use_elastic_deform, no_transformations):
     dst_location = get_path_data1(dataset_name, use_elastic_deform, no_transformations)
     return pkl.load(open(dst_location+"/dataset_test","rb"))
     
-def train_model1():
-        
-def test_model1():
+def train_model1(dataset_path,experiment_name):
+    train_loop.train_loop(experiment_name,1,dataset_path)
 
-def create_second_dataset():
+def test_model1(dataset,experiment_name):
+    train_loop.test_model(1, experiment_name, dataset, sigma=0.8, num_dets=40)
 
-def train_model2():
+def create_second_dataset(first_dataset_path,experiment_name):
+    train_loop.create_second_dataset(first_dataset_path,experiment_name)
     
+def train_model2():
+    train_loop.train_loop(experiment_name,2,dataset_path)
+
 def test_model2():
+    #TODO IMPORTANT
