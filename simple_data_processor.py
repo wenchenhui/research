@@ -151,7 +151,10 @@ def make_dataset(set_masses_size, set_neg_size, src_loc, dst_loc):
         else:
             no_masses.append(patient)
     
+    
     # SHUFFLE SO WE CAN OBTAIN DIFFERENT DATA DISTRIBUTION EACH TIME
+    with_masses.sort()
+    no_masses.sort()
     random.seed(_SEED)
     random.shuffle(with_masses)
     random.shuffle(no_masses)

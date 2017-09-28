@@ -65,13 +65,19 @@ def train_model1(dataset_path,experiment_name):
     train_loop.train_loop(experiment_name,1,dataset_path)
 
 def test_model1(dataset,experiment_name):
-    train_loop.test_model(1, experiment_name, dataset, sigma=0.8, num_dets=40)
+    train_loop.test_model( experiment_name, dataset, both_models=False)
 
+def test_model2(dataset,experiment_name):
+    train_loop.test_model( experiment_name, dataset, both_models=True)
+    
+    
 def create_second_dataset(first_dataset_path,experiment_name):
     train_loop.create_second_dataset(first_dataset_path,experiment_name)
     
-def train_model2():
+def train_model2(experiment_name):
+    dataset_path = "/home/eduardo/Results/"+experiment_name+"/second_dataset/"
     train_loop.train_loop(experiment_name,2,dataset_path)
 
-def test_model2():
-    #TODO IMPORTANT
+    
+#dataset = pkl.load(open("/home/eduardo/dataset_elastic_trans_True/dataset_test","rb"))
+#test_model2(dataset,"elastic_deforms_True")

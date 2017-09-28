@@ -177,7 +177,7 @@ def train_loop(experiment_name, model_number, dataset_path):
     sess.close()
     
 import glob
-def create_second_dataset(experiment_name, dataset_first):
+def create_second_dataset(dataset_first,experiment_name):
     
     print("Creating Second Dataset")
     
@@ -203,7 +203,7 @@ def create_second_dataset(experiment_name, dataset_first):
             bar.tick()
             img = np.load(file)
             _,pred = model.test(sess,img[np.newaxis,:,:,np.newaxis],np.zeros((1,)))
-            if pred[0,1]>0.5:
+            if pred[0,1]>0.1:
                 copyfile(file,dataset_second+"/"+split+"/negative/"+os.path.basename(file))
         
         for file in pos_images:
@@ -214,6 +214,7 @@ def create_second_dataset(experiment_name, dataset_first):
     print("FINISHED Creating Second Dataset")    
     
 
+"""
 # TODO WITH MODEL NUMBER: IDEA -> Use recursion
 def test_model(model_num, experiment_name, dataset_first,sigma=2,num_dets=10,thresh=0.5,sufix=""):
     
@@ -266,6 +267,105 @@ def test_model(model_num, experiment_name, dataset_first,sigma=2,num_dets=10,thr
     sess.close()
 
     return all_suspicions
+"""       
+        
+def test_model(experiment_name, dataset_first,sigma=1,num_dets=40,thresh=0.5, both_models = False):
+    
+    tf.reset_default_graph()
+    sess = tf.Session()
+    results_path = "/home/eduardo/Results/"+experiment_name
+    load_weights_path1 = results_path+"/model1"    
+    if both_models:    
+        load_weights_path2 = results_path+"/model2"   
+    _,model_full1 = load_model(sess,1,load_weights_path1)
+    if both_models:
+        model2,_ = load_model(sess,2,load_weights_path2)
+    iDs = dataset_first.files_names.keys()
+    
+    sufix = ""
+    if both_models: sufix = "second"
+    
+    
+    all_suspicions = dict()
+    bar = ut.progress_bar(len(iDs))
+
+
+    for iD in iDs: # TODO
+        bar.tick()
+        all_suspicions[iD] = list()
+        
+        image = np.load(dataset_first.files_names[iD])
+        detections = get_dets(sess, model_full1, image, sigma=sigma, thresh=thresh, num_dets=num_dets)
+        if both_models:
+            detections = reclassify_detections(sess,model2,image,detections)
+        
+        masks = get_masks(dataset_first.masks[iD])
+        
+        all_suspicions[iD] += get_suspicions(detections, masks)
+        
+    pkl.dump(all_suspicions,open(results_path+"/all_suspicions"+sufix,"wb"))
+    compute_score(all_suspicions,results_path,sufix) 
+    
+    sess.close()
+
+    return all_suspicions
+        
+        
+def reclassify_detections(sess,model,image,detections):
+    patches = np.zeros((len(detections),36,36,1))
+    image = iproc.all_pad(image, 20, "reflect")
+    counter = 0
+    for det in detections:
+        x,y = det[0]+20
+        patches[counter,:,:,0] = image[x-18:x+18,y-18:y+18]
+        counter+=1
+        
+    _,preds = model.test(sess,patches,np.ones(len(detections)))
+    counter = 0
+    for det in detections:
+        detections[counter][1] = preds[counter,1]
+        counter+=1
+        
+    return detections
+    
+def get_suspicions(detections,masks):
+    
+    suspicions = []
+    masks_hit = np.zeros(len(masks))
+    for det in detections:
+        correct_mask = inside_masks(det,masks,masks_hit)
+        if correct_mask!=-1:
+            if not masks_hit[correct_mask]:
+                suspicions.append([*det,"TP"])
+                masks_hit[correct_mask]=1
+        else:
+            suspicions.append([*det,"FP"])
+    
+    for i in range(len(masks_hit)):
+        if masks_hit[i] == 0:
+            suspicions.append([-1,-1,"FN"])
+    
+    return suspicions
+    
+def get_dets(sess, model_full, image, sigma=0.8, thresh=-1, num_dets=40):
+    
+    htmap = model_full.test(sess,image)
+    htmap = iproc.filter_img(htmap,sigma)
+    htmap = htmap*(htmap>thresh)
+    htmap = iproc.improved_non_maxima_supression(htmap)
+    #np.save(results_path+"/heatmaps"+str(model_num)+"/"+os.path.basename(dataset_first.files_names[iD]),htmap)
+    dets = iproc.detections(htmap,num_dets)
+    return dets
+   
+def get_masks(masks_files):
+    masks = []
+
+    for file in masks_files:
+        mask = np.load(file)
+        mask = augment_mask(mask)
+        masks.append(mask)
+    
+    return masks
     
 from scipy.ndimage.measurements import center_of_mass as center_of_mass
 def augment_mask(mask):
@@ -330,6 +430,7 @@ def inside_masks(det,masks,masks_hit):
     
 
 def load_model(sess,model_num,load_weights_path):
+    print(load_weights_path)
     model = models.detector36(False, "model"+str(model_num), False)
     model.load(sess,load_weights_path)    
     model_full = models.detector36(True, "model"+str(model_num), True)    

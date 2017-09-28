@@ -48,7 +48,7 @@ def detector36(full_img = False,scope_name="model1",reuse = False):
         #model.add_easy_layer(ltype = "batchnorm",n_filters = 256, moments=[0])   
         model.add_easy_layer(ltype="out", n_filters = 2, conv_shape = [1,1])
         
-        model._compile()
+        model._compile(scope_name=scope_name)
     
     return model
 
@@ -103,7 +103,7 @@ class Model():
         return
         
     
-    def _compile(self,add_loss = None):
+    def _compile(self,add_loss = None,scope_name=None):
         self.pred = tf.nn.softmax(self.out)
         
         self.loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.y,logits=self.out))
@@ -116,7 +116,10 @@ class Model():
         #with tf.control_dependencies(update_ops):
         # Ensures that we execute the update_ops before performing the train_step
         self.train_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.loss)
-        self.saver = tf.train.Saver()
+        if scope_name != None:
+            self.saver = tf.train.Saver(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=scope_name))
+        else:
+            self.saver = tf.train.Saver()
         return
     
     def add_additional_loss(self,loss):
