@@ -11,7 +11,7 @@ import tensorflow as tf
 import numpy as np
 import funcs.image_processing as i_proc
 
-def detector36(full_img = False,scope_name="model1",reuse = False):
+def detector36(full_img = False,scope_name="model1",reuse = False, batch_norm = False, dropout=False):
     """    
     conv1   3x3     32 filters    
     conv2   3x3     32 filters
@@ -32,25 +32,28 @@ def detector36(full_img = False,scope_name="model1",reuse = False):
             model = Model([36,36])
         
         model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 32)
-        #model.add_easy_layer(ltype = "batchnorm",n_filters = 32, moments=[0,1,2])   
+        if batch_norm: model.add_easy_layer(ltype = "batchnorm",n_filters = 32, moments=[0,1,2])   
         model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 32)
-        #model.add_easy_layer(ltype = "batchnorm",n_filters = 32, moments=[0,1,2])   
+        if batch_norm: model.add_easy_layer(ltype = "batchnorm",n_filters = 32, moments=[0,1,2])   
         model.add_easy_layer(ltype="max_pool",k=2, stride=2)
         model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 64)
-        #model.add_easy_layer(ltype = "batchnorm",n_filters = 64, moments=[0,1,2])   
+        if batch_norm: model.add_easy_layer(ltype = "batchnorm",n_filters = 64, moments=[0,1,2])   
         model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 64)
-        #model.add_easy_layer(ltype = "batchnorm",n_filters = 64, moments=[0,1,2])   
+        if batch_norm: model.add_easy_layer(ltype = "batchnorm",n_filters = 64, moments=[0,1,2])   
         model.add_easy_layer(ltype="max_pool",k=2, stride=2)
         model.add_easy_layer(ltype="flatten")
         model.add_easy_layer(ltype="dense", n_filters = 256, conv_shape = [6,6])# CONV SHAPE
-        #model.add_easy_layer(ltype = "batchnorm",n_filters = 256, moments=[0])   
+        if batch_norm: model.add_easy_layer(ltype = "batchnorm",n_filters = 256, moments=[0])
+        if dropout: model.add_easy_layer(ltype="dense", n_filters = 256, conv_shape = [1,1])
         model.add_easy_layer(ltype="dense", n_filters = 256, conv_shape = [1,1])# CONV SHAPE
-        #model.add_easy_layer(ltype = "batchnorm",n_filters = 256, moments=[0])   
+        if batch_norm: model.add_easy_layer(ltype = "batchnorm",n_filters = 256, moments=[0])
+        if dropout: model.add_easy_layer(ltype="dense", n_filters = 256, conv_shape = [1,1])
         model.add_easy_layer(ltype="out", n_filters = 2, conv_shape = [1,1])
         
         model._compile(scope_name=scope_name)
     
     return model
+    
 
 
 class Test_model():
@@ -219,6 +222,10 @@ def easy_layer(model, **args):
     if ltype == "dropout":#make a class_wrapper
         layer = cnn_lib.dropout(model.out,model.keep_prob)
         return Generic_Layer(layer)
+        
+    if ltype == "dropout":#make a class_wrapper
+        layer = cnn_lib.dropout(model.out,model.keep_prob)
+        return Generic_Layer(layer)
                 
     if ltype == "dense":
         n_filters =         args.get("n_filters")
@@ -294,6 +301,15 @@ def test_easy_layer(model, **args):
 
         layer = Dense_Convolutional_Layer(conv_shape, "dense"+str(len(model.layers)), model.out,activation=activation)
         model.out_shape[2] = n_filters
+        return layer
+        
+    if ltype == "batchnorm":
+        n_filters = args.get("n_filters")
+        name = "bn"+str(len(model.layers))
+        phase_train = model.phase_train
+        #moments = args.get("moments")
+        moments = [0,1,2]
+        layer = Batchnorm_Layer(n_filters,name,model.out,phase_train,moments)
         return layer
         
     if ltype == "out":

@@ -14,21 +14,26 @@ EASY TO USE EXPERIMENT
 SAVE ONE COPY AS TEMPLATE
 """
 
-dataset = "CBIS"
+dataset = "inbreast"
 inv_scale = 24
 clahe = True
 
 
-first_dataset_name = "CBIS"
+first_dataset_name = dataset
 use_elastic_deform= True
 no_transformations = 40
 
-experiment_name = "smaller_threshold_for_second_dataset"
+experiment_name = "inbreast_easy_test_same_exp"
+
+
+batch_norm = False
+dropout = False
+
 
 pre_data_folder = cfunc.get_path_predata(dataset,inv_scale,clahe)
 
 if not os.path.isdir(pre_data_folder):
-    cfunc.create_standart_predata(dataset,inv_scale,clahe,debug=False)
+    cfunc.create_standart_predata(dataset,inv_scale,clahe,debug=True)
     
 data_folder = cfunc.get_path_data1(first_dataset_name, use_elastic_deform, no_transformations)
 
@@ -36,6 +41,8 @@ if not os.path.isdir(data_folder):
     dataset = cfunc.create_first_dataset(pre_data_folder, first_dataset_name , use_elastic_deform, no_transformations)
 else:
     dataset = cfunc.load_dataset(first_dataset_name, use_elastic_deform, no_transformations)
+    
+train_loop.test_model( experiment_name, dataset, both_models=False)
 
 cfunc.train_model1(data_folder,experiment_name)
 cfunc.test_model1(dataset,experiment_name)

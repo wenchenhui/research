@@ -21,19 +21,20 @@ def print_s(string,file):
     print(string,file=file)
     
 
-def train_loop(experiment_name, model_number, dataset_path):
+def train_loop(experiment_name, model_number, dataset_path, batch_norm=False, dropout=False):
     """
     DEFINE PARAMETERS
     """
     #experiment_name = "test_experiment"
     #model_number = 1 # DEFINES IF THIS IS THE FIRST OR SECOND MODEL IN THE CASCADE
-    model = models.detector36(False, "model"+str(model_number), False) # MODEL ARCHITECTURE
+    model = models.detector36(False, "model"+str(model_number), False, batch_norm=batch_norm ,dropout=dropout) # MODEL ARCHITECTURE
     
     
     # LEARNING PARAMETERS
     learning_rate = 0.0001
     
-    training_iterations = int(5e3)  # TRAINING ITERATIONS
+    #training_iterations = int(5e3)  # TRAINING ITERATIONS
+    training_iterations = int(5e3)
     one_epoch_every = 1e2           # ITERATIONS PER EPOCH 
     number_of_epochs = int(training_iterations/one_epoch_every)+1
     
@@ -46,8 +47,8 @@ def train_loop(experiment_name, model_number, dataset_path):
         os.mkdir(results_path)
     
     
-    log_file = open(results_path+"/log.txt","w") # LOG FILE
-    metrics_save_path = results_path+"/metrics.npy"
+    log_file = open(results_path+"/log"+str(model_number)+".txt","w") # LOG FILE
+    metrics_save_path = results_path+"/metrics"+str(model_number)+".npy"
     
     save_weights_path = results_path+"/model"+str(model_number)
     os.mkdir(save_weights_path)
@@ -64,7 +65,7 @@ def train_loop(experiment_name, model_number, dataset_path):
         
     
     
-    evaluation_metric_index = 1 #DEFINES THE POSITION OF THE METRIC USED FOR COMPARISSON
+    evaluation_metric_index = 2 #DEFINES THE POSITION OF THE METRIC USED FOR COMPARISSON
     evaluation_metric_objective = 1 #1 in case of Maximization and -1 in case of Minimization (ONLY POSITIVE VALUES)
     number_of_evaluation_metrics = 4
     metrics_array = np.zeros((number_of_epochs,number_of_evaluation_metrics*2+1))
@@ -176,8 +177,10 @@ def train_loop(experiment_name, model_number, dataset_path):
     np.save(metrics_save_path,metrics_array[0:epoch_counter,:])
     sess.close()
     
+    return metrics_array[0:epoch_counter,:]
+    
 import glob
-def create_second_dataset(dataset_first,experiment_name):
+def create_second_dataset(dataset_first,experiment_name,threshold=0.5):
     
     print("Creating Second Dataset")
     
@@ -203,7 +206,7 @@ def create_second_dataset(dataset_first,experiment_name):
             bar.tick()
             img = np.load(file)
             _,pred = model.test(sess,img[np.newaxis,:,:,np.newaxis],np.zeros((1,)))
-            if pred[0,1]>0.1:
+            if pred[0,1]>threshold:
                 copyfile(file,dataset_second+"/"+split+"/negative/"+os.path.basename(file))
         
         for file in pos_images:

@@ -75,6 +75,12 @@ class dataset():
             self.masks[iD] = [file]
         else:
             self.masks[iD].append(file)
+            
+    def add_empty_masks(self,iD):
+        if iD not in self.masks.keys():
+            self.masks[iD] = []
+        else:
+            raise("ERROR")
     
     def add_roi_file(self,iD,file):
         if iD not in self.rois.keys():
@@ -83,13 +89,16 @@ class dataset():
             raise("Duplicate roi iD (",iD,") in file: ", file)
     
     def make_patches_dataset(self, no_transformations, use_rotations,
-                             use_mirroring, use_elastic_deform, debug):
+                             use_mirroring, use_elastic_deform, debug, step=None):
         
         global _use_rotations,_use_mirroring,_use_elastic_deform, _debug
         _use_rotations = use_rotations
         _use_mirroring = use_mirroring
         _use_elastic_deform = use_elastic_deform
         _debug = debug
+        
+        if step == None:
+            step = {"train":0.5,"validation":0.5,"test":2}
         #COUNTER USED TO NAME PATCHES UNIQUELY
         counter = 0
         
@@ -103,9 +112,12 @@ class dataset():
                 bar.tick()                
                 # LOAD IMAGE, MASKS AND ROI. CREATE FULL MASK (SUM OF MASKS)
                 img_ori = np.load(self.files_names[img_iD])
-                masks_ori = _load_file_array(self.masks[img_iD])
+                
+                mask_files = self.masks[img_iD]
+                #only_neg = (True if (len(mask_files) == 0) else False)
+                masks_ori = _load_file_array(mask_files)
                 roi_ori = np.load(self.rois[img_iD])
-                full_mask_ori = _sum_masks(masks_ori)
+                full_mask_ori = _sum_masks(masks_ori,shape = img_ori.shape)
                 
                 # FOR no_transformations TIMES
                 for i in range(no_transformations):
@@ -119,7 +131,7 @@ class dataset():
                     full_mask = _preprocess_mask(full_mask_ori,trans)
 
                     # CREATE AND SAVE NEGATIVE PATCHES
-                    patches = _take_negative_patches(img,roi,full_mask)
+                    patches = _take_negative_patches(img,roi,full_mask,step=step[split])
                     counter = _save_patches(split,"negative",patches,counter)
                     
                     # CREATE AND SAVE POSITIVE PATCHES (ONE FOR EACH MASK)
@@ -184,13 +196,18 @@ def make_dataset(set_masses_size, set_neg_size, src_loc, dst_loc):
                 img_iD = data.add_image_file(set_,file)
                 data.add_roi_file(img_iD,_get_roi(file))
                 
-                for mask in _get_masks(file):
-                    data.add_mask_file(img_iD,mask)
+                if len(_get_masks(file)) == 0:
+                    data.add_empty_masks(img_iD)
+                else:
+                    for mask in _get_masks(file):
+                        data.add_mask_file(img_iD,mask)
         
         # POP PATIENTS FROM LIST UNTIL WE HAVE THE NUMBER REQUESTED BY THE USER
         for i in range(set_neg_size[set_]):
-            file = no_masses.pop()
+            patient = no_masses.pop()
+            image_files = _get_image_files(patient)
             img_iD = data.add_image_file(set_,file)
+            data.add_empty_masks(img_iD)
             data.add_roi_file(img_iD,_get_roi(file))
     
     # ASSERT NO PATIENT IS LEFT BEHIND
@@ -209,10 +226,11 @@ FUNCTIONS TO DEAL WITH PATCHES
 _halfpatch=18
 patches = np.zeros((10000,_halfpatch*2,_halfpatch*2))
 
-def _take_negative_patches(img,roi,full_mask):
-    x = np.arange(0,img.shape[0],_halfpatch*2) 
-    y = np.arange(0,img.shape[1],_halfpatch*2)
+def _take_negative_patches(img,roi,full_mask,step=1):
+    x = np.arange(0,img.shape[0],_halfpatch*step) 
+    y = np.arange(0,img.shape[1],_halfpatch*step)
     
+    x,y = np.round(x).astype(int),np.round(y).astype(int)
     #plt.imshow(img)
     #plt.show()
     counter = 0
@@ -315,8 +333,9 @@ def _load_file_array(list_of_files):
         result.append(np.load(file))
     return result
     
-def _sum_masks(mask_list):
-    total = np.zeros(mask_list[0].shape)
+def _sum_masks(mask_list,shape = None):
+    if shape==None: shape = mask_list[0].shape
+    total = np.zeros(shape)
     for i in range(0,len(mask_list)):
         total+=mask_list[i]
     total = np.ceil(total)

@@ -46,30 +46,29 @@ _clahe_op = cv2.createCLAHE(clipLimit=2, tileGridSize=(8,8))
 def _load_preprocess_save_image(file,patient,image_ids):
     #Load image
     img = dicom.read_file(file).pixel_array
-    
-    #Stretch histogram and convert to uint8
+    original_shape = img.shape
+    if _clahe:
+        img = _clahe_op.apply(img)    
+        
     M = img.max()
     m = img.min()
-    img = ((img-m)/(M-m))*255
-    img = img.astype(np.uint8)
-    original_shape = img.shape
-    # Apply CLAHE method [2]
-    if _clahe:
-        img = _clahe_op.apply(img)
+    img2 = ((img-m)/(M-m))*255
+    img2 = img2.astype(np.uint8)
     
-    # Resize image
-    img = cv2.resize(img,(0,0),fx = _scale,fy = _scale)
-         
+    img = cv2.resize(img2,(0,0),fx = _scale,fy = _scale,interpolation=cv2.INTER_AREA)        
     
     # Remove artifacts
     roi = _get_roi(img)
-    
+    img = (img.astype(float)-128)/256
+    #plt.imshow(img)
+    #plt.show()
+    #input("next?")
     # Save image
     if _debug:
         imsave(_dst_location+patient+"_img_"+str(image_ids)+".png",img)
         imsave(_dst_location+patient+"_roi_"+str(image_ids)+".png",roi)
     else:
-        np.save(_dst_location+patient+"_img_"+str(image_ids),img.astype(float)/255)
+        np.save(_dst_location+patient+"_img_"+str(image_ids),img)
         np.save(_dst_location+patient+"_roi_"+str(image_ids),roi)
     
     return roi,original_shape
@@ -125,4 +124,27 @@ def make_INbreast_standart_format(inv_scale, clahe, dst_location, debug):
             _load_preprocess_save_masks(masks, patient,image_ids, roi,original_shape)
             image_ids+=1
     
-make_INbreast_standart_format(24,True,"/home/eduardo/inbreast_test/",True)
+def check_with_mass_vs_healthy(src_path):
+    with_masses = 0
+    no_masses = 0
+    n_images = len(glob.glob(src_path+"/*_img_*.npy"))
+    
+    for iD in range(n_images):
+        paths = glob.glob(src_path+"/*_img_"+str(iD)+".npy")
+        assert len(paths) == 1
+        if len(glob.glob(src_path+"/*_mask_"+str(iD)+"_*")) > 0:
+            with_masses += 1
+        else: 
+            no_masses += 1
+    print(with_masses)
+    print(no_masses)
+        
+        
+    
+    
+    
+    
+    
+    
+    
+    

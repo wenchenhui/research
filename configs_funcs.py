@@ -6,6 +6,7 @@ Created on Wed Sep 27 17:43:39 2017
 """
 
 import data.cbis_standart_format as cbis_standart_format
+import data.inbreast_standard_format as inbreast_standard_format
 import simple_data_processor
 import train_loop
 import pickle as pkl
@@ -28,8 +29,10 @@ def create_standart_predata(dataset,inv_scale,clahe,debug,
                             folder_masks = "raw CBIS mass rois/DOI/"):
     
     dst_location = get_path_predata(dataset,inv_scale,clahe)    
-    cbis_standart_format.make_CBIS_standart_format(1/inv_scale,clahe,src_location,folder_images,folder_masks,dst_location,debug)
-    
+    if dataset == "CBIS":        
+        cbis_standart_format.make_CBIS_standart_format(1/inv_scale,clahe,src_location,folder_images,folder_masks,dst_location,debug)
+    elif dataset == "inbreast":
+        inbreast_standard_format.make_INbreast_standart_format(inv_scale,clahe,dst_location,debug)
     
 def get_path_data1(dataset,use_elastic_deform,no_transformations):
     use_elastic_deform_text = ""
@@ -41,8 +44,12 @@ def create_first_dataset(src_location, dataset_name, use_elastic_deform, no_tran
     
     dst_location = get_path_data1(dataset_name, use_elastic_deform, no_transformations)
     
-    set_masses_size = {"train":491,"validation":100,"test":100}
-    set_neg_size = {"train":0,"validation":0,"test":0}
+    #set_masses_size = {"train":491,"validation":100,"test":100}
+    #set_neg_size = {"train":0,"validation":0,"test":0}
+    
+    set_masses_size = {"train":34,"validation":8,"test":8}
+    set_neg_size = {"train":40,"validation":9,"test":9}
+    
     
     dataset = simple_data_processor.make_dataset(set_masses_size, set_neg_size, src_location, dst_location)
     
