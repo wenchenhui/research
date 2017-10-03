@@ -44,10 +44,65 @@ def detector36(full_img = False,scope_name="model1",reuse = False, batch_norm = 
         model.add_easy_layer(ltype="flatten")
         model.add_easy_layer(ltype="dense", n_filters = 256, conv_shape = [6,6])# CONV SHAPE
         if batch_norm: model.add_easy_layer(ltype = "batchnorm",n_filters = 256, moments=[0])
-        if dropout: model.add_easy_layer(ltype="dense", n_filters = 256, conv_shape = [1,1])
+        if dropout: model.add_easy_layer(ltype="dropout", n_filters = 256, conv_shape = [1,1])
         model.add_easy_layer(ltype="dense", n_filters = 256, conv_shape = [1,1])# CONV SHAPE
         if batch_norm: model.add_easy_layer(ltype = "batchnorm",n_filters = 256, moments=[0])
-        if dropout: model.add_easy_layer(ltype="dense", n_filters = 256, conv_shape = [1,1])
+        if dropout: model.add_easy_layer(ltype="dropout", n_filters = 256, conv_shape = [1,1])
+        model.add_easy_layer(ltype="out", n_filters = 2, conv_shape = [1,1])
+        
+        model._compile(scope_name=scope_name)
+    
+    return model
+    
+def detector76(full_img = False,scope_name="model1",reuse = False, batch_norm = False, dropout=False):
+    """    
+    conv1   3x3     32 filters    
+    conv2   3x3     32 filters
+    max_pool    
+    
+    conv3   3x3     64 filters
+    conv4   3x3     64 filters
+    max_pool
+    
+    dense1          256 filters
+    dense2          256 filters
+    output          2 filters
+    """    
+    with tf.variable_scope(scope_name,reuse=reuse) as scope:
+        if full_img:
+            model = Test_model()
+        else:
+            model = Model([76,76])
+        
+        model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 32)
+        if batch_norm: model.add_easy_layer(ltype = "batchnorm",n_filters = 32, moments=[0,1,2])   
+        model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 32)
+        if batch_norm: model.add_easy_layer(ltype = "batchnorm",n_filters = 32, moments=[0,1,2])
+        model.add_easy_layer(ltype="max_pool",k=2, stride=2)
+        
+        model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 64)
+        if batch_norm: model.add_easy_layer(ltype = "batchnorm",n_filters = 64, moments=[0,1,2])   
+        model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 64)
+        if batch_norm: model.add_easy_layer(ltype = "batchnorm",n_filters = 64, moments=[0,1,2])   
+        model.add_easy_layer(ltype="max_pool",k=2, stride=2)
+        
+        model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 128)
+        if batch_norm: model.add_easy_layer(ltype = "batchnorm",n_filters = 128, moments=[0,1,2])   
+        model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 128)
+        if batch_norm: model.add_easy_layer(ltype = "batchnorm",n_filters = 128, moments=[0,1,2])   
+        model.add_easy_layer(ltype="max_pool",k=2, stride=2)
+        
+        
+        model.add_easy_layer(ltype="flatten")
+        
+        model.add_easy_layer(ltype="dense", n_filters = 512, conv_shape = [6,6])# CONV SHAPE        
+        if batch_norm: model.add_easy_layer(ltype = "batchnorm",n_filters = 512, moments=[0])
+        if dropout: model.add_easy_layer(ltype="dropout")
+        
+        model.add_easy_layer(ltype="dense", n_filters = 512, conv_shape = [1,1])# CONV SHAPE
+        if batch_norm: model.add_easy_layer(ltype = "batchnorm",n_filters = 512, moments=[0])
+        if dropout: model.add_easy_layer(ltype="dropout")
+            
         model.add_easy_layer(ltype="out", n_filters = 2, conv_shape = [1,1])
         
         model._compile(scope_name=scope_name)

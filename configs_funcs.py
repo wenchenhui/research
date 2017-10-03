@@ -44,15 +44,19 @@ def create_first_dataset(src_location, dataset_name, use_elastic_deform, no_tran
     
     dst_location = get_path_data1(dataset_name, use_elastic_deform, no_transformations)
     
-    #set_masses_size = {"train":491,"validation":100,"test":100}
-    #set_neg_size = {"train":0,"validation":0,"test":0}
-    
-    set_masses_size = {"train":34,"validation":8,"test":8}
-    set_neg_size = {"train":40,"validation":9,"test":9}
+    if dataset_name == "CBIS":
+        set_masses_size = {"train":491,"validation":100,"test":100}
+        set_neg_size = {"train":0,"validation":0,"test":0}
+    elif dataset_name == "inbreast":
+        set_masses_size = {"train":34,"validation":8,"test":8}
+        set_neg_size = {"train":40,"validation":9,"test":9}
+    elif dataset_name == "inbreast_12":
+        set_masses_size = {"train":34,"validation":8,"test":8}
+        set_neg_size = {"train":40,"validation":9,"test":9}
     
     
     dataset = simple_data_processor.make_dataset(set_masses_size, set_neg_size, src_location, dst_location)
-    
+
     # PATCHES
     #halfpatch= 18
     

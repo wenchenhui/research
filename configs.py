@@ -15,7 +15,7 @@ SAVE ONE COPY AS TEMPLATE
 """
 
 dataset = "inbreast"
-inv_scale = 24
+inv_scale = 12
 clahe = True
 
 
@@ -27,29 +27,33 @@ experiment_name = "inbreast_easy_test_same_exp"
 
 
 batch_norm = False
-dropout = False
+dropout = True
 
 
 pre_data_folder = cfunc.get_path_predata(dataset,inv_scale,clahe)
 
 if not os.path.isdir(pre_data_folder):
-    cfunc.create_standart_predata(dataset,inv_scale,clahe,debug=True)
+    cfunc.create_standart_predata(dataset,inv_scale,clahe,debug=False)
     
-data_folder = cfunc.get_path_data1(first_dataset_name, use_elastic_deform, no_transformations)
+if False:
+    data_folder = cfunc.get_path_data1(first_dataset_name, use_elastic_deform, no_transformations)
 
-if not os.path.isdir(data_folder):
-    dataset = cfunc.create_first_dataset(pre_data_folder, first_dataset_name , use_elastic_deform, no_transformations)
-else:
-    dataset = cfunc.load_dataset(first_dataset_name, use_elastic_deform, no_transformations)
+    if not os.path.isdir(data_folder):
+        dataset = cfunc.create_first_dataset(pre_data_folder, first_dataset_name , use_elastic_deform, no_transformations)
+    else:
+        dataset = cfunc.load_dataset(first_dataset_name, use_elastic_deform, no_transformations)
     
-train_loop.test_model( experiment_name, dataset, both_models=False)
+if False:
+    experiment_name = "Batch_Dropout_exp_"+str(batch_norm)+"_"+str(dropout)
+    cfunc.train_model1(data_folder,experiment_name)
+    cfunc.test_model1(dataset,experiment_name)
 
-cfunc.train_model1(data_folder,experiment_name)
-cfunc.test_model1(dataset,experiment_name)
 
-cfunc.create_second_dataset(data_folder,experiment_name)
-cfunc.train_model2(experiment_name)
-cfunc.test_model2(dataset,experiment_name)
+
+
+#cfunc.create_second_dataset(data_folder,experiment_name)
+#cfunc.train_model2(experiment_name)
+#cfunc.test_model2(dataset,experiment_name)
 
 
 

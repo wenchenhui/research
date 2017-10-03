@@ -65,7 +65,7 @@ def train_loop(experiment_name, model_number, dataset_path, batch_norm=False, dr
         
     
     
-    evaluation_metric_index = 2 #DEFINES THE POSITION OF THE METRIC USED FOR COMPARISSON
+    evaluation_metric_index = 1 #DEFINES THE POSITION OF THE METRIC USED FOR COMPARISSON
     evaluation_metric_objective = 1 #1 in case of Maximization and -1 in case of Minimization (ONLY POSITIVE VALUES)
     number_of_evaluation_metrics = 4
     metrics_array = np.zeros((number_of_epochs,number_of_evaluation_metrics*2+1))
@@ -271,7 +271,32 @@ def test_model(model_num, experiment_name, dataset_first,sigma=2,num_dets=10,thr
 
     return all_suspicions
 """       
+
+def create_pmaps(experiment_name, dataset_first):
+    
+    
+    #tf.reset_default_graph()
+    #sess = tf.Session()
+    results_path = "/home/eduardo/Results/"+experiment_name
+    #os.mkdir(results_path+"/pmaps")
+    #load_weights_path1 = results_path+"/model1"    
+    #_,model_full1 = load_model(sess,1,load_weights_path1)
+    iDs = dataset_first.files_names.keys()
+    
+    bar = ut.progress_bar(len(iDs))
+
+    for iD in iDs: # TODO
+        bar.tick()
         
+        #image = np.load(dataset_first.files_names[iD])
+        #pmap = model_full1.test(sess,image)        
+        #np.save(results_path+"/pmaps"+"/"+str(iD),pmap)
+        masks = get_masks(dataset_first.masks[iD],add=False)
+        for i in range(len(masks)):
+            np.save(results_path+"/pmaps"+"/m"+str(iD)+"_"+str(i),masks[i])
+    #sess.close()
+
+
 def test_model(experiment_name, dataset_first,sigma=1,num_dets=40,thresh=0.5, both_models = False):
     
     tf.reset_default_graph()
@@ -299,9 +324,16 @@ def test_model(experiment_name, dataset_first,sigma=1,num_dets=40,thresh=0.5, bo
         
         image = np.load(dataset_first.files_names[iD])
         detections = get_dets(sess, model_full1, image, sigma=sigma, thresh=thresh, num_dets=num_dets)
+        
+                
         if both_models:
             detections = reclassify_detections(sess,model2,image,detections)
         
+        for i in range(len(detections)):
+            plt.scatter(detections[i][0][1],detections[i][0][0],c="b")
+        plt.imshow(model_full1.test(sess,image))
+        plt.show()
+    
         masks = get_masks(dataset_first.masks[iD])
         
         all_suspicions[iD] += get_suspicions(detections, masks)
@@ -313,6 +345,7 @@ def test_model(experiment_name, dataset_first,sigma=1,num_dets=40,thresh=0.5, bo
 
     return all_suspicions
         
+
         
 def reclassify_detections(sess,model,image,detections):
     patches = np.zeros((len(detections),36,36,1))
@@ -353,19 +386,20 @@ def get_suspicions(detections,masks):
 def get_dets(sess, model_full, image, sigma=0.8, thresh=-1, num_dets=40):
     
     htmap = model_full.test(sess,image)
-    htmap = iproc.filter_img(htmap,sigma)
+    #htmap = iproc.filter_img(htmap,sigma)
     htmap = htmap*(htmap>thresh)
     htmap = iproc.improved_non_maxima_supression(htmap)
     #np.save(results_path+"/heatmaps"+str(model_num)+"/"+os.path.basename(dataset_first.files_names[iD]),htmap)
     dets = iproc.detections(htmap,num_dets)
     return dets
    
-def get_masks(masks_files):
+def get_masks(masks_files,add=True):
     masks = []
 
     for file in masks_files:
         mask = np.load(file)
-        mask = augment_mask(mask)
+        if add:
+            mask = augment_mask(mask)
         masks.append(mask)
     
     return masks
@@ -434,10 +468,20 @@ def inside_masks(det,masks,masks_hit):
 
 def load_model(sess,model_num,load_weights_path):
     print(load_weights_path)
-    model = models.detector36(False, "model"+str(model_num), False)
+    model = models.detector36(False, "model"+str(model_num), False,False,False)
     model.load(sess,load_weights_path)    
-    model_full = models.detector36(True, "model"+str(model_num), True)    
+    model_full = models.detector36(True, "model"+str(model_num), True,False,False)    
     return model,model_full
     
 
+
+#dataset = pkl.load(open("/home/eduardo/data_inbreast_40_deform_elas/dataset_test","rb"))
+#experiment_name = "Batch_Dropout_exp_False_True"
+#create_pmaps(experiment_name,dataset)
+
+
+
     
+#data = pkl.load(open("/home/eduardo/data_inbreast_40_deform_elas/dataset_test","rb"))
+#exp_name = "Batch_Dropout_exp_False_True"
+#test_model(exp_name,data)

@@ -21,8 +21,6 @@ first_dataset_name = dataset
 use_elastic_deform= True
 no_transformations = 40
 
-
-
 pre_data_folder = cfunc.get_path_predata(dataset,inv_scale,clahe)
 
 if not os.path.isdir(pre_data_folder):
@@ -47,15 +45,13 @@ for use_elastic_deform in [False,True]:
         experiment_name = "Elastic_transf_exp_"+str(use_elastic_deform)+"_"+str(i)
 
     
-        batch,dropout = True,False
+        batch,dropout = False,True
         metrics = train_loop.train_loop(experiment_name,1,dataset_path,batch_norm=batch,dropout=dropout)
             
         max_pr += metrics[1::,6].max()
         max_roc += metrics[1::,7].max()
         max_acc += metrics[1::,8].max()
                 
-    results[use_elastic_deform] = max_pr/5
-    results[use_elastic_deform] = max_roc/5
-    results[use_elastic_deform] = max_acc/5
+    results[use_elastic_deform] = max_pr/5,max_roc/5,max_acc/5
         
 pkl.dump(results,open("/home/eduardo/Results/Elastic_exp_results","wb"))

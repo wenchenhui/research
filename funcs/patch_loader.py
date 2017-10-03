@@ -29,6 +29,21 @@ batch_objy = None
 flag_needs_reseting = False # USED WHEN ITS DIMENSION IS ALTERED
 
 def define(initial_path,classes,batch_size,shape):
+    global list_of_files,indexes,list_of_files_per_split,list_of_labels_per_split
+    global total_samples,size,shape,batch_objx,batch_objy,flag_needs_reseting
+      
+    list_of_files = dict()
+    indexes = dict()
+    list_of_files_per_split = dict()
+    list_of_labels_per_split = dict()
+    total_samples = -1
+
+    size = -1
+    shape = -1
+    batch_objx = None
+    batch_objy = None
+    flag_needs_reseting = False # USED WHEN ITS DIMENSION IS ALTERED
+
     _define_initial_path(initial_path)
     _define_classes(classes)
     _define_size_shape(batch_size,shape)    

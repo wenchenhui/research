@@ -123,7 +123,8 @@ class dataset():
                 for i in range(no_transformations):
                     
                     # GET A RANDOM TRANFORMATION PARAMETRIZATION
-                    trans = _get_random_transformation_parameters()    
+                    if _use_elastic_deform:
+                        trans = _get_random_transformation_parameters(img_ori.shape)
                     
                     #APPLY TO IMAGE, MASKS AND ROI
                     img = _preprocess(img_ori,trans)
@@ -143,9 +144,8 @@ class dataset():
     def save(self,path):
         pkl.dump(self,open(path+"/dataset_"+self.name,"wb"))
 
-
 def make_dataset(set_masses_size, set_neg_size, src_loc, dst_loc):
-    global _src_location, _dst_location
+    global _src_location, _dst_location, lastiD
     _src_location = src_loc
     _dst_location = dst_loc
     
@@ -194,6 +194,7 @@ def make_dataset(set_masses_size, set_neg_size, src_loc, dst_loc):
             #THE DATASET
             for file in image_files:
                 img_iD = data.add_image_file(set_,file)
+                lastiD = img_iD
                 data.add_roi_file(img_iD,_get_roi(file))
                 
                 if len(_get_masks(file)) == 0:
@@ -206,9 +207,10 @@ def make_dataset(set_masses_size, set_neg_size, src_loc, dst_loc):
         for i in range(set_neg_size[set_]):
             patient = no_masses.pop()
             image_files = _get_image_files(patient)
-            img_iD = data.add_image_file(set_,file)
-            data.add_empty_masks(img_iD)
-            data.add_roi_file(img_iD,_get_roi(file))
+            for file in image_files:
+                img_iD = data.add_image_file(set_,file)
+                data.add_empty_masks(img_iD)
+                data.add_roi_file(img_iD,_get_roi(file))
     
     # ASSERT NO PATIENT IS LEFT BEHIND
     assert len(with_masses) == 0
@@ -223,6 +225,7 @@ _______________________________________________________________________________
 _______________________________DAYDREAMING_____________________________________
 FUNCTIONS TO DEAL WITH PATCHES
 """    
+#_halfpatch=38
 _halfpatch=18
 patches = np.zeros((10000,_halfpatch*2,_halfpatch*2))
 

@@ -41,6 +41,7 @@ dataset_path = cfunc.get_path_data1(first_dataset_name, use_elastic_deform, no_t
 results = dict()
 for batch in [True, False]:
     for dropout in [True, False]:
+
         tf.reset_default_graph()
         experiment_name = "Batch_Dropout_exp_"+str(batch)+"_"+str(dropout)
         metrics = train_loop.train_loop(experiment_name,1,dataset_path,batch_norm=batch,dropout=dropout)
@@ -48,9 +49,7 @@ for batch in [True, False]:
         max_roc = metrics[:,7].max()
         max_acc = metrics[:,8].max()
         
-        results[batch,dropout] = max_pr
-        results[batch,dropout] = max_roc
-        results[batch,dropout] = max_acc
+        results[batch,dropout] = (max_pr,max_roc,max_acc)
         
 pkl.dump(results,open("/home/eduardo/Results/Batch_Dropout_exp_results","wb"))
         
