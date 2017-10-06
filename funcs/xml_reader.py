@@ -61,8 +61,13 @@ def get_mask_images(file,shape):
     
     return masses_imgs
         
-        
-        
+def has_mass(file):
+    lesions = get_unprocessed_mask_points(file)       
+    masses = []
+    for lesion in lesions:
+        if lesion[1] == "M":
+            masses.append(lesion[0])
+    return len(masses)
         
         
         

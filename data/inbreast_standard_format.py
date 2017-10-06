@@ -74,7 +74,7 @@ def _load_preprocess_save_image(file,patient,image_ids):
     return roi,original_shape
 
 
-def _get_roi(img,disk_size = int(60*4/24)):
+def _get_roi(img):
     return img>5
 
 def _load_preprocess_save_masks(file,patient,image_ids,roi,original_shape):
