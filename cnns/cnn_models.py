@@ -54,7 +54,7 @@ def detector36(full_img = False,scope_name="model1",reuse = False, batch_norm = 
     
     return model
     
-def detector76(full_img = False,scope_name="model1",reuse = False, batch_norm = False, dropout=False):
+def detector76(full_img = False,scope_name="model1",reuse = False, batch_norm = False, dropout=True):
     """    
     conv1   3x3     32 filters    
     conv2   3x3     32 filters
@@ -74,25 +74,24 @@ def detector76(full_img = False,scope_name="model1",reuse = False, batch_norm = 
         else:
             model = Model([76,76])
         
-        model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 32)
+        model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 64)
         if batch_norm: model.add_easy_layer(ltype = "batchnorm",n_filters = 32, moments=[0,1,2])   
-        model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 32)
+        model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 64)
         if batch_norm: model.add_easy_layer(ltype = "batchnorm",n_filters = 32, moments=[0,1,2])
         model.add_easy_layer(ltype="max_pool",k=2, stride=2)
         
-        model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 64)
+        model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 128)
         if batch_norm: model.add_easy_layer(ltype = "batchnorm",n_filters = 64, moments=[0,1,2])   
-        model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 64)
+        model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 128)
         if batch_norm: model.add_easy_layer(ltype = "batchnorm",n_filters = 64, moments=[0,1,2])   
         model.add_easy_layer(ltype="max_pool",k=2, stride=2)
         
-        model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 128)
+        model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 256)
         if batch_norm: model.add_easy_layer(ltype = "batchnorm",n_filters = 128, moments=[0,1,2])   
-        model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 128)
+        model.add_easy_layer(ltype="conv",filters_shape = [3,3], n_filters = 256)
         if batch_norm: model.add_easy_layer(ltype = "batchnorm",n_filters = 128, moments=[0,1,2])   
         model.add_easy_layer(ltype="max_pool",k=2, stride=2)
-        
-        
+        if dropout: model.add_easy_layer(ltype="dropout")
         model.add_easy_layer(ltype="flatten")
         
         model.add_easy_layer(ltype="dense", n_filters = 512, conv_shape = [6,6])# CONV SHAPE        
@@ -113,7 +112,7 @@ def detector76(full_img = False,scope_name="model1",reuse = False, batch_norm = 
 
 class Test_model():
     def __init__(self,in_channels=1):
-        self.inp= tf.placeholder(tf.float32,[1,400,400,in_channels])
+        self.inp= tf.placeholder(tf.float32,[1,600,600,in_channels])
         self.phase_train = tf.placeholder(tf.bool,[])
         self.keep_prob = tf.placeholder(tf.float32,[])
         self.out = self.inp
@@ -127,11 +126,11 @@ class Test_model():
         
     def test(self,sess,img):
         original_shape = img.shape         
-        img = i_proc.all_pad(img,20,"reflect")
-        img = i_proc.complete_size(img,(400,400))[np.newaxis,:,:,np.newaxis]
+        img = i_proc.all_pad(img,36,"reflect")
+        img = i_proc.complete_size(img,(600,600))[np.newaxis,:,:,np.newaxis]
         res_img = sess.run([self.pred],feed_dict={self.inp:img, self.phase_train:False, self.keep_prob:1})
-        res_img = np.squeeze(cnn_lib.mult_unstrided(res_img[0][:,:,:,1],2))
-        res_img = i_proc.all_pad_remove(res_img,2)
+        res_img = np.squeeze(cnn_lib.mult_unstrided(res_img[0][:,:,:,1],3))
+        #res_img = i_proc.all_pad_remove(res_img,200)
         res_img = i_proc.restore_size(res_img,original_shape)
         return res_img
         

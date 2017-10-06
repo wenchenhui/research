@@ -13,7 +13,7 @@ import numpy as np
 from scipy.misc import imread
 
 classes = ["positive","negative"]
-directories = ["train","validation","test"]
+directories = ["train","validation"]
 initial_path = "/home/eduardo/dataset_test/"
 
 list_of_files = dict()
@@ -28,7 +28,7 @@ batch_objx = None
 batch_objy = None
 flag_needs_reseting = False # USED WHEN ITS DIMENSION IS ALTERED
 
-def define(initial_path,classes,batch_size,shape):
+def define(initial_path,classes,batch_size,_shape):
     global list_of_files,indexes,list_of_files_per_split,list_of_labels_per_split
     global total_samples,size,shape,batch_objx,batch_objy,flag_needs_reseting
       
@@ -46,7 +46,7 @@ def define(initial_path,classes,batch_size,shape):
 
     _define_initial_path(initial_path)
     _define_classes(classes)
-    _define_size_shape(batch_size,shape)    
+    _define_size_shape(batch_size,_shape)    
     
 def _define_size_shape(batch_size,inp_shape):
     global batch_objx, batch_objy, per_class_size, size,shape

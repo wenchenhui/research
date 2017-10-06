@@ -6,7 +6,7 @@ inbreastv2
 @author: edu
 """
 import sys
-sys.path.append("/home/edu/research/")
+sys.path.append("/home/eduardo/research/research/")
 import os
 import glob
 import pickle as pkl
@@ -14,7 +14,7 @@ import auxiliary_funcs as auxilf
 import funcs.xml_reader as xmlr
 from matplotlib import pyplot as plt
 
-src_folder = "/media/edu/9C8EC20D8EC1E03E/inbreast/INbreast Release 1.0.part01/"
+src_folder = "/media/eduardo/TOSHIBA EXT/INESC/INbreast/"
 set_masses_size = {"train":34,"validation":8,"test":8}
 set_neg_size = {"train":40,"validation":9,"test":9}
 
@@ -109,7 +109,7 @@ def create_standard_format(folder):
     
     pkl.dump(dataset,open(folder+"/data","wb"))
             
-create_standard_format("/home/edu/inbreast_full_images_12")
+create_standard_format("/home/eduardo/inbreast_full_images_12")
     
     
     

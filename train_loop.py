@@ -74,8 +74,7 @@ def train_loop(experiment_name, model_number, dataset_path, batch_norm=False, dr
     """
     CONFIGURE PATCH LOADER
     """
-    pl.define(dataset_path, ["negative","positive"], 128, (36,36,1))
-    pl.load_random_batch("train")
+    
     
     sess = tf.Session()
     sess.run(tf.global_variables_initializer())
