@@ -151,4 +151,4 @@ def train_loop(experiment_name, dataset_path, model_number, model_type = models.
 
 
 #train_loop("no_deform_new_model","/home/eduardo/inbreast_train_patches_no_deform/",1)
-train_loop(sys.argv[0],sys.argv[1],1)
+train_loop(sys.argv[1],sys.argv[2],1)

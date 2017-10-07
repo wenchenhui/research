@@ -12,6 +12,7 @@ import os
 import collections
 from scipy.ndimage.filters import gaussian_filter
 from scipy.ndimage.interpolation import map_coordinates
+from scipy.ndimage.measurements import center_of_mass
 from skimage.measure import regionprops,label
 from matplotlib import pyplot as plt
 import funcs.utils as ut
@@ -28,10 +29,10 @@ step = 38
 transformations = 40
 sigma = 20
 alpha = 300
-use_elastic_deform = False
+use_elastic_deform = True
 
 base_path = "/home/eduardo/inbreast_full_images_12/"
-dst_path = "/home/eduardo/inbreast_train_patches_no_deform/"
+dst_path = "/home/eduardo/inbreast_train_patches_corrected/"
 
 
 Transformation = collections.namedtuple("Transformation","angle mirroring shape dx dy")
@@ -100,7 +101,7 @@ def generate_mask_points(masks):
             local = get_grid_mask(m)
             points[i*9:(i+1)*9] = local
             safe_zone+=m
-    
+            i+=1
         return points,safe_zone
         
 def get_grid_mask(mask):
@@ -123,7 +124,9 @@ def get_grid_mask(mask):
 def generate_safe_zone(masks,roi):
     safe_zone = roi
     for m in masks:
+        x,y = np.round(center_of_mass(m)).astype(int)
         safe_zone = np.logical_and(safe_zone,np.logical_not(m))
+        
     return safe_zone
     
     

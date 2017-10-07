@@ -1,6 +1,6 @@
 #!/bin/bash
 
-python3 batch_norm_experiment.py
-python3 elastic_deformations_test.py
+python3 enhanced_train.py no_deform_new_model /home/eduardo/inbreast_train_patches_no_deform/
+python3 enhanced_train.py new_model /home/eduardo/inbreast_train_patches/
 
 
