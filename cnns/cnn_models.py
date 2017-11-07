@@ -11,6 +11,10 @@ import tensorflow as tf
 import numpy as np
 import funcs.image_processing as i_proc
 
+
+
+
+
 def detector36(full_img = False,scope_name="model1",reuse = False, batch_norm = False, dropout=False):
     """    
     conv1   3x3     32 filters    
@@ -172,7 +176,7 @@ class Model():
         #update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
         #with tf.control_dependencies(update_ops):
         # Ensures that we execute the update_ops before performing the train_step
-        self.train_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.loss)
+        self.train_op = tf.train.GradientDescentOptimizer(self.learning_rate).minimize(self.loss)
         if scope_name != None:
             self.saver = tf.train.Saver(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=scope_name))
         else:
@@ -239,6 +243,21 @@ def easy_layer(model, **args):
         name = "conv_rotat"+str(len(model.layers))
         
         layer = Convolutional_Layer_Rotat(shape, name , model.out, padding=padding, stride=stride, activation=activation)
+        
+        model.out_shape = layer.out.shape.as_list()[1:4]
+        
+        return layer
+    
+    if ltype == "conv_rotat_corrected":
+        n_filters =         args.get("n_filters")
+        filters_shape =     args.get("filters_shape")
+        padding =           args.get("padding")
+        stride =            args.get("stride")
+        activation =        args.get("activation")
+        shape = [filters_shape[0],filters_shape[1],model.out_shape[2],n_filters]
+        name = "conv_rotatc"+str(len(model.layers))
+        
+        layer = Convolutional_Layer_Rotat_Corrected(shape, name , model.out, padding=padding, stride=stride, activation=activation)
         
         model.out_shape = layer.out.shape.as_list()[1:4]
         
@@ -439,6 +458,31 @@ class Convolutional_Layer_Rotat():
             for i in range(4):
                 layers.append(cnn_lib.conv2d(inp,W,self.b.value,stride=stride,padding=padding))
                 W = cnn_lib.rotate(W)
+                #self.out = cnn_lib.conv2d(inp,self.W.value,self.b.value,stride=stride,padding=padding) 
+            layer = tf.concat(layers,axis = 3)
+            self.out = cnn_lib.activation(layer,activation)
+            
+class Convolutional_Layer_Rotat_Corrected():
+    def __init__(self, shape, name, inp, padding = None , stride = None, activation = None):
+        
+        padding = "VALID" if padding == None else padding
+        stride = 1 if stride == None else stride    
+        activation = "relu" if activation == None else activation 
+        
+        self.name = name
+        self.shape = shape
+        W_shape = shape.copy()
+        W_shape[3]=int(W_shape[3]/4)
+        with tf.variable_scope(name) as scope:       
+            self.W = Param(W_shape,"W",initializer("normal",np.sqrt(2/(shape[0]*shape[1]*shape[3]))))
+            self.b = Param(W_shape[3],"b",initializer("constant",0.0))
+            
+            layers = []
+            W = self.W.value
+            for i in range(4):
+                layers.append(cnn_lib.conv2d(inp,W,self.b.value,stride=stride,padding=padding))
+                W = cnn_lib.rotate(W)
+                W = cnn_lib.shift(W)
                 #self.out = cnn_lib.conv2d(inp,self.W.value,self.b.value,stride=stride,padding=padding) 
             layer = tf.concat(layers,axis = 3)
             self.out = cnn_lib.activation(layer,activation)

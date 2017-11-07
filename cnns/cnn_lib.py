@@ -132,6 +132,32 @@ def rotate(W):
     W = tf.transpose(W,perm=[1,0,2,3])
     W = tf.reverse(W,axis=[0])
     return W
+
+
+def shift(W):
+    """
+    print(W.get_shape())
+    shape = W.get_shape().as_list()
+    W1 = tf.slice(W,[0,0,0,0],[shape[0],shape[1],3,shape[3]]) 
+    W2 = tf.slice(W,[0,0,3,0],[shape[0],shape[1],1,shape[3]]) 
+    Wf = tf.concat((W2,W1),axis=2)
+    print(Wf.get_shape())
+    return Wf
+    """
+    print(W.get_shape())
+    shape = W.get_shape().as_list()
+    #int((3/4)*shape[2])
+    W1 = tf.slice(W,[0,0,0,0],[shape[0],shape[1],int((3/4)*shape[2]),shape[3]]) 
+    W2 = tf.slice(W,[0,0,int((3/4)*shape[2]),0],[shape[0],shape[1],int((1/4)*shape[2]),shape[3]]) 
+    Wf = tf.concat((W2,W1),axis=2)
+    print(Wf.get_shape())
+    return Wf
+
+    print(W.get_shape())
+    return W
+    W = tf.transpose(W,perm=[1,0,2,3])
+    W = tf.reverse(W,axis=[0])
+    return W
 """ 
 Creates a max pooling layer to be used in a model
 Params:     inp         -> input to the layer (tensor)     
